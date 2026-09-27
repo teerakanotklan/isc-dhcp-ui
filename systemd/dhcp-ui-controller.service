@@ -1,0 +1,22 @@
+[Unit]
+Description=ISC DHCP UI Controller Service
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dhcp-ui
+EnvironmentFile=-/etc/dhcp-ui/controller.env
+ExecStart=/opt/dhcp-ui/bin/controller -port ${CONTROLLER_PORT} -db ${DB_PATH} -leases ${LEASES_PATH} -config ${CONFIG_PATH}
+Restart=always
+RestartSec=5s
+LimitNOFILE=65535
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dhcp-ui-controller
+
+[Install]
+WantedBy=multi-user.target

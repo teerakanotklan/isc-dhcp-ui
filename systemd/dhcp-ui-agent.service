@@ -1,0 +1,22 @@
+[Unit]
+Description=ISC DHCP UI Agent Service
+After=network.target network-online.target isc-dhcp-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dhcp-ui
+EnvironmentFile=-/etc/dhcp-ui/agent.env
+ExecStart=/opt/dhcp-ui/bin/agent -port ${AGENT_PORT} -token ${AGENT_TOKEN} -leases ${LEASES_PATH} -config ${CONFIG_PATH}
+Restart=always
+RestartSec=5s
+LimitNOFILE=65535
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dhcp-ui-agent
+
+[Install]
+WantedBy=multi-user.target

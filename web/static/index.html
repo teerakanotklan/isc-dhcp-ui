@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ISC DHCP Failover Management Console</title>
+    <title>ISC DHCP Management Console</title>
+    <!-- Prevent theme flickering before CSS loads -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('dhcp_theme') || 'dark';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -33,12 +44,31 @@
         ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.2); border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
 
+        /* Slow spin animation for loader */
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 3s linear infinite;
+        }
+
+        /* Route Progress Bar */
+        #route-progress-bar {
+            transition: width 0.25s ease-out, opacity 0.3s ease-out;
+        }
+
+        /* Initial Page Loader */
+        #page-loader {
+            transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+        }
+
         /* Collapsible Sidebar on Desktop */
         #app-sidebar {
             transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #app-sidebar.collapsed {
-            width: 5rem !important;
+            width: 5rem !important; /* 80px */
         }
         #app-sidebar.collapsed .sidebar-text {
             display: none !important;
@@ -72,15 +102,32 @@
         }
         @media (min-width: 768px) {
             #main-viewport {
-                margin-left: 16rem;
+                margin-left: 16rem; /* 256px */
             }
             #main-viewport.sidebar-collapsed {
-                margin-left: 5rem;
+                margin-left: 5rem; /* 80px */
             }
         }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- TOP ROUTE PROGRESS BAR (Tab switch & page transitions) -->
+    <div id="route-progress-bar" class="fixed top-0 left-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 z-[110] w-0 opacity-0 pointer-events-none shadow-sm shadow-indigo-500/50"></div>
+
+    <!-- INITIAL PAGE LOADING OVERLAY -->
+    <div id="page-loader" class="fixed inset-0 z-[100] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center pointer-events-auto">
+        <div class="relative flex items-center justify-center mb-4">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl shadow-xl shadow-indigo-600/30">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+            </div>
+            <div class="absolute -inset-2.5 rounded-3xl border-2 border-indigo-500/20 border-t-indigo-600 animate-spin"></div>
+        </div>
+        <p class="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">ISC DHCP Management Console</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 font-mono" id="loader-status">Initializing control plane...</p>
+    </div>
 
     <!-- BACKDROP FOR MOBILE SIDEBAR -->
     <div id="mobile-backdrop" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"></div>
@@ -118,42 +165,42 @@
                 </div>
             </div>
 
-            <!-- Navigation Links -->
+            <!-- Multi-Page Navigation Links -->
             <nav class="flex-1 px-3 py-3 space-y-1 text-xs font-semibold">
-                <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40" title="Dashboard">
+                <a href="/dashboard" onclick="event.preventDefault(); switchTab('dashboard');" id="nav-btn-dashboard" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40" title="Dashboard">
                     <svg class="w-4 h-4 min-w-[1rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                     <span class="sidebar-text truncate">Dashboard</span>
-                </button>
+                </a>
 
-                <button onclick="switchTab('subnets')" id="nav-btn-subnets" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Scopes & Subnets">
+                <a href="/subnets" onclick="event.preventDefault(); switchTab('subnets');" id="nav-btn-subnets" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Scopes & Subnets">
                     <svg class="w-4 h-4 min-w-[1rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     <span class="sidebar-text truncate">Scopes & Subnets</span>
-                </button>
+                </a>
 
-                <button onclick="switchTab('static')" id="nav-btn-static" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Static Reservations">
+                <a href="/static" onclick="event.preventDefault(); switchTab('static');" id="nav-btn-static" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Static Reservations">
                     <svg class="w-4 h-4 min-w-[1rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                     <span class="sidebar-text truncate">Reservations (Fixed IP)</span>
-                </button>
+                </a>
 
-                <button onclick="switchTab('leases')" id="nav-btn-leases" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Active Leases">
+                <a href="/leases" onclick="event.preventDefault(); switchTab('leases');" id="nav-btn-leases" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Active Leases">
                     <svg class="w-4 h-4 min-w-[1rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                     <span class="sidebar-text truncate">Active Leases</span>
-                </button>
+                </a>
 
-                <button onclick="switchTab('clustering')" id="nav-btn-clustering" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Clustering & Failover">
+                <a href="/clustering" onclick="event.preventDefault(); switchTab('clustering');" id="nav-btn-clustering" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Clustering & Failover">
                     <svg class="w-4 h-4 min-w-[1rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                     <span class="sidebar-text truncate">Clustering</span>
-                </button>
+                </a>
 
-                <button onclick="switchTab('deploy')" id="nav-btn-deploy" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Deploy & Audit Log">
+                <a href="/deploy" onclick="event.preventDefault(); switchTab('deploy');" id="nav-btn-deploy" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Deploy & Audit Log">
                     <svg class="w-4 h-4 min-w-[1rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                     <span class="sidebar-text truncate">Deploy & Audit Log</span>
-                </button>
+                </a>
 
-                <button onclick="switchTab('settings')" id="nav-btn-settings" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Server Options">
+                <a href="/settings" onclick="event.preventDefault(); switchTab('settings');" id="nav-btn-settings" class="nav-item sidebar-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Server Options">
                     <svg class="w-4 h-4 min-w-[1rem]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     <span class="sidebar-text truncate">Server Options</span>
-                </button>
+                </a>
             </nav>
         </div>
 
@@ -204,21 +251,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                     </svg>
                 </button>
-
-                <!-- Quick Deploy Button -->
-                <button type="button" onclick="switchTab('deploy')" class="px-3 sm:px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 flex items-center space-x-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Deploy Cluster</span>
-                    <span class="sm:hidden">Deploy</span>
-                </button>
+            </div>
         </header>
 
         <!-- MAIN SCROLLABLE CONTENT -->
-        <main class="flex-1 p-6 space-y-6">
+        <main class="flex-1 p-4 sm:p-6 space-y-6">
 
-            <!-- TAB 1: DASHBOARD -->
+            <!-- TAB 1: DASHBOARD (/dashboard or /) -->
             <section id="tab-dashboard" class="space-y-6">
                 <!-- Dual Node Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -299,147 +338,93 @@
                         <p id="stat-static" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0</p>
                     </div>
                     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Client Leases</span>
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Leases</span>
                         <p id="stat-leases" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">0</p>
                     </div>
                 </div>
             </section>
 
-            <!-- TAB 2: SCOPES & SUBNETS -->
+            <!-- TAB 2: SUBNETS & SCOPES (/subnets) -->
             <section id="tab-subnets" class="hidden space-y-6">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-bold text-slate-900 dark:text-white">DHCP Scopes & Subnets</h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage IPv4 networks, dynamic address pools, and RFC 2132 scope options.</p>
+                        <p class="text-xs text-slate-500">Manage IPv4 networks, dynamic address pools, and RFC 2132 options.</p>
                     </div>
-                    <button onclick="openSubnetModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 flex items-center space-x-1.5 transition-all">
-                        <span>+ New DHCP Scope</span>
+                    <button type="button" onclick="openSubnetModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 flex items-center space-x-1.5 self-start sm:self-auto">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span>New DHCP Scope</span>
                     </button>
                 </div>
                 <div id="subnets-list" class="space-y-4"></div>
             </section>
 
-            <!-- TAB 3: STATIC RESERVATIONS -->
+            <!-- TAB 3: STATIC RESERVATIONS (/static) -->
             <section id="tab-static" class="hidden space-y-6">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Static Address Reservations</h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Bind fixed IP addresses to specific client MAC hardware addresses.</p>
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Static IP Reservations</h2>
+                        <p class="text-xs text-slate-500">Bind fixed IPv4 addresses directly to device MAC addresses.</p>
                     </div>
-                    <button onclick="openStaticModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 flex items-center space-x-1.5 transition-all">
-                        <span>+ New Reservation</span>
+                    <button type="button" onclick="openStaticModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 flex items-center space-x-1.5 self-start sm:self-auto">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span>New Reservation</span>
                     </button>
                 </div>
 
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                    <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300">
-                        <thead class="bg-slate-50 dark:bg-slate-950/60 text-slate-500 uppercase font-semibold border-b border-slate-200 dark:border-slate-800">
-                            <tr>
-                                <th class="py-3.5 px-4">Client Hostname</th>
-                                <th class="py-3.5 px-4">MAC Address</th>
-                                <th class="py-3.5 px-4">Reserved IP</th>
-                                <th class="py-3.5 px-4">Description</th>
-                                <th class="py-3.5 px-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="static-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/80"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- TAB 4: ACTIVE LEASES -->
-            <section id="tab-leases" class="hidden space-y-6">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Active Leases Explorer</h2>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Real-time lease records parsed from the server database.</p>
-                    </div>
-                    <div class="flex items-center space-x-3 w-full sm:w-auto">
-                        <input type="text" id="lease-search" oninput="filterLeases()" placeholder="Search IP, MAC or Hostname..."
-                            class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64 transition-all">
-                        <button onclick="refreshLeases()" class="p-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 transition-colors" title="Refresh">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                    <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300">
-                        <thead class="bg-slate-50 dark:bg-slate-950/60 text-slate-500 uppercase font-semibold border-b border-slate-200 dark:border-slate-800">
-                            <tr>
-                                <th class="py-3.5 px-4">Assigned IP</th>
-                                <th class="py-3.5 px-4">Hardware MAC</th>
-                                <th class="py-3.5 px-4">Client Hostname</th>
-                                <th class="py-3.5 px-4">Binding State</th>
-                                <th class="py-3.5 px-4">Lease Start</th>
-                                <th class="py-3.5 px-4">Lease Expiration</th>
-                                <th class="py-3.5 px-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leases-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/80"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- TAB 5: DEPLOY CENTER -->
-            <section id="tab-deploy" class="hidden space-y-6">
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-900 dark:text-white">Cluster Configuration Deployment</h2>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Generate and synchronize <span class="font-mono text-indigo-600 dark:text-indigo-400">dhcpd.conf</span> across Primary & Secondary with pre-flight syntax validation.</p>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <button onclick="previewConfigs()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-all">
-                                Refresh Diff
-                            </button>
-                            <button onclick="executeDeploy()" id="btn-deploy-cluster" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 flex items-center space-x-2 transition-all">
-                                <span>🚀 Validate & Deploy to Cluster</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="deploy-result-box" class="hidden mt-6 p-4 rounded-xl text-xs font-mono"></div>
-
-                    <!-- Config Preview Diffs -->
-                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">dhcp1 (Primary) Config</span>
-                                <span class="text-[10px] font-mono text-slate-400">/etc/dhcp/dhcpd.conf</span>
-                            </div>
-                            <textarea id="conf-preview-primary" readonly class="w-full h-80 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 font-mono text-xs text-slate-800 dark:text-slate-300 focus:outline-none resize-none"></textarea>
-                        </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">dhcp2 (Secondary) Config</span>
-                                <span class="text-[10px] font-mono text-slate-400">/etc/dhcp/dhcpd.conf</span>
-                            </div>
-                            <textarea id="conf-preview-secondary" readonly class="w-full h-80 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 font-mono text-xs text-slate-800 dark:text-slate-300 focus:outline-none resize-none"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Deployment History -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-                    <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-4">Deployment History & Audit Log</h3>
-                    <div class="overflow-hidden">
-                        <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300">
-                            <thead class="bg-slate-50 dark:bg-slate-950/60 text-slate-500 uppercase font-semibold border-b border-slate-200 dark:border-slate-800">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
                                 <tr>
-                                    <th class="py-3 px-4">Timestamp</th>
-                                    <th class="py-3 px-4">Operator</th>
-                                    <th class="py-3 px-4">Commit Message</th>
-                                    <th class="py-3 px-4">Status</th>
+                                    <th class="py-3 px-4">Hostname</th>
+                                    <th class="py-3 px-4">MAC Address</th>
+                                    <th class="py-3 px-4">Reserved IP</th>
+                                    <th class="py-3 px-4">Description</th>
+                                    <th class="py-3 px-4 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="deploy-history-body" class="divide-y divide-slate-100 dark:divide-slate-800/80"></tbody>
+                            <tbody id="static-list-body" class="divide-y divide-slate-100 dark:divide-slate-800/80"></tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- TAB: CLUSTERING MANAGEMENT -->
+            <!-- TAB 4: ACTIVE LEASES EXPLORER (/leases) -->
+            <section id="tab-leases" class="hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Active Leases Explorer</h2>
+                        <p class="text-xs text-slate-500">Live client IP bindings parsed from <span class="font-mono">dhcpd.leases</span>.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <input type="text" id="lease-search" oninput="filterLeases()" placeholder="Search IP, MAC or Hostname..." class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 w-64">
+                        <button type="button" onclick="loadLeases()" class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-indigo-600" title="Refresh Leases">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
+                                <tr>
+                                    <th class="py-3 px-4">Client IP</th>
+                                    <th class="py-3 px-4">MAC Address</th>
+                                    <th class="py-3 px-4">Client Hostname</th>
+                                    <th class="py-3 px-4">Binding State</th>
+                                    <th class="py-3 px-4">Lease Start</th>
+                                    <th class="py-3 px-4">Lease End</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leases-list-body" class="divide-y divide-slate-100 dark:divide-slate-800/80"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: CLUSTERING MANAGEMENT (/clustering) -->
             <section id="tab-clustering" class="hidden space-y-6">
                 <!-- Cluster Header -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -502,7 +487,6 @@
 
                 <!-- STATE 2: ACTIVE CLUSTER TOPOLOGY -->
                 <div id="view-cluster-active" class="hidden space-y-6">
-                    <!-- Cluster Topology Diagram Card -->
                     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
                             <div>
@@ -570,7 +554,65 @@
                 </div>
             </section>
 
-            <!-- TAB 6: GLOBAL SERVER OPTIONS -->
+            <!-- TAB 6: DEPLOY & AUDIT LOG (/deploy) -->
+            <section id="tab-deploy" class="hidden space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white">Cluster Configuration Deployment & Audit</h2>
+                    <p class="text-xs text-slate-500">Inspect generated ISC syntax, validate cluster nodes, and trigger live updates.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Primary dhcpd.conf Preview</h3>
+                            <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono">Local Host</span>
+                        </div>
+                        <pre id="preview-primary" class="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-[11px] text-slate-800 dark:text-slate-200 overflow-x-auto max-h-96">Generating preview...</pre>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Secondary dhcpd.conf Preview</h3>
+                            <span class="text-[10px] text-purple-600 dark:text-purple-400 font-mono">Partner Node</span>
+                        </div>
+                        <pre id="preview-secondary" class="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-[11px] text-slate-800 dark:text-slate-200 overflow-x-auto max-h-96">Generating preview...</pre>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-2">Execute Deployment</h3>
+                    <p class="text-xs text-slate-500 mb-4">Deploying performs a dry-run test with <code class="font-mono text-indigo-600">dhcpd -t</code> on both nodes, writes configuration, and restarts services.</p>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="deploy-message" placeholder="Deployment commit message (e.g. Added Subnet 192.168.10.0/24)..." class="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button type="button" id="btn-deploy-cluster" onclick="deployCluster()" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-md shadow-indigo-600/30 flex items-center justify-center space-x-2">
+                            <span>🚀 Validate & Deploy to Cluster</span>
+                        </button>
+                    </div>
+                    <div id="deploy-result-box" class="hidden mt-6 p-4 rounded-xl text-xs font-mono"></div>
+                </div>
+
+                <!-- Audit Log History -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 dark:border-slate-800">
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">Deployment Audit Log</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
+                                <tr>
+                                    <th class="py-3 px-4">Timestamp</th>
+                                    <th class="py-3 px-4">Operator</th>
+                                    <th class="py-3 px-4">Commit Message</th>
+                                    <th class="py-3 px-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deploy-history-body" class="divide-y divide-slate-100 dark:divide-slate-800/80"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: GLOBAL SERVER OPTIONS (/settings) -->
             <section id="tab-settings" class="hidden space-y-6">
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm max-w-3xl">
                     <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Global Server Options</h2>
@@ -583,7 +625,7 @@
                             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Global DNS Servers (Comma-separated IPs)</label>
                             <input type="text" id="setting-dns" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Default Lease Time (seconds)</label>
                                 <input type="number" id="setting-default-lease" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -723,8 +765,8 @@
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <button type="button" onclick="closeSubnetModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
-                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30 hover:bg-indigo-500 transition-all">Save Scope</button>
+                    <button type="button" onclick="closeSubnetModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30 hover:bg-indigo-500">Save Scope</button>
                 </div>
             </form>
         </div>

@@ -103,7 +103,6 @@ func (db *DB) createTables() error {
 
 	ALTER TABLE nodes ADD COLUMN cert_file TEXT DEFAULT '';
 	ALTER TABLE nodes ADD COLUMN key_file TEXT DEFAULT '';
-
 	CREATE TABLE IF NOT EXISTS pools (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		subnet_id INTEGER NOT NULL,
@@ -268,8 +267,11 @@ func (db *DB) GetClusterNodes() (models.Node, models.Node, bool, error) {
 
 // Subnets & Pools CRUD
 func (db *DB) GetSubnets() ([]models.Subnet, error) {
-	rows, err := db.conn.Query(`SELECT id, network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options, created_at 
-		FROM subnets ORDER BY id ASC`)
+	rows, err := db.conn.Query(`SELECT id, network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, 
+		COALESCE(ntp_servers, ''), COALESCE(tftp_server, ''), COALESCE(bootfile_name, ''), 
+		COALESCE(lease_days, 0), COALESCE(lease_hours, 12), COALESCE(lease_minutes, 0), lease_time, 
+		enable_failover, description, COALESCE(custom_options, ''), created_at 
+		FROM subnets ORDER BY network_address ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -279,8 +281,8 @@ func (db *DB) GetSubnets() ([]models.Subnet, error) {
 	for rows.Next() {
 		var s models.Subnet
 		if err := rows.Scan(
-			&s.ID, &s.NetworkAddress, &s.Netmask, &s.CIDRPrefix, &s.Gateway,
-			&s.DNSServers, &s.DomainName, &s.NTPServers, &s.TFTPServer, &s.BootFileName,
+			&s.ID, &s.NetworkAddress, &s.Netmask, &s.CIDRPrefix, &s.Gateway, &s.DNSServers, &s.DomainName,
+			&s.NTPServers, &s.TFTPServer, &s.BootFileName,
 			&s.LeaseDays, &s.LeaseHours, &s.LeaseMinutes, &s.LeaseTime,
 			&s.EnableFailover, &s.Description, &s.CustomOptions, &s.CreatedAt,
 		); err != nil {
@@ -298,13 +300,15 @@ func (db *DB) GetSubnets() ([]models.Subnet, error) {
 
 func (db *DB) SaveSubnet(s models.Subnet) (int, error) {
 	totalSeconds := (s.LeaseDays * 86400) + (s.LeaseHours * 3600) + (s.LeaseMinutes * 60)
-	if totalSeconds <= 0 {
-		totalSeconds = 43200 // default 12h
+	if totalSeconds > 0 {
+		s.LeaseTime = totalSeconds
+	} else if s.LeaseTime == 0 {
+		s.LeaseTime = 43200 // default 12 hours
 	}
-	s.LeaseTime = totalSeconds
 
 	if s.ID == 0 {
-		res, err := db.conn.Exec(`INSERT INTO subnets (network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options)
+		res, err := db.conn.Exec(`INSERT INTO subnets 
+			(network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			s.NetworkAddress, s.Netmask, s.CIDRPrefix, s.Gateway, s.DNSServers, s.DomainName,
 			s.NTPServers, s.TFTPServer, s.BootFileName, s.LeaseDays, s.LeaseHours, s.LeaseMinutes, s.LeaseTime,
@@ -315,8 +319,10 @@ func (db *DB) SaveSubnet(s models.Subnet) (int, error) {
 		id, _ := res.LastInsertId()
 		return int(id), nil
 	}
-
-	_, err := db.conn.Exec(`UPDATE subnets SET network_address=?, netmask=?, cidr_prefix=?, gateway=?, dns_servers=?, domain_name=?, ntp_servers=?, tftp_server=?, bootfile_name=?, lease_days=?, lease_hours=?, lease_minutes=?, lease_time=?, enable_failover=?, description=?, custom_options=? 
+	_, err := db.conn.Exec(`UPDATE subnets SET 
+		network_address=?, netmask=?, cidr_prefix=?, gateway=?, dns_servers=?, domain_name=?, 
+		ntp_servers=?, tftp_server=?, bootfile_name=?, lease_days=?, lease_hours=?, lease_minutes=?, lease_time=?, 
+		enable_failover=?, description=?, custom_options=? 
 		WHERE id=?`,
 		s.NetworkAddress, s.Netmask, s.CIDRPrefix, s.Gateway, s.DNSServers, s.DomainName,
 		s.NTPServers, s.TFTPServer, s.BootFileName, s.LeaseDays, s.LeaseHours, s.LeaseMinutes, s.LeaseTime,

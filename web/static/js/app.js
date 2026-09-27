@@ -17,17 +17,84 @@ const tabTitles = {
     'settings': 'Global Server Options'
 };
 
+// --------------------------------------------------------------
+// Top Route Progress Bar & Full-Page Loader
+// --------------------------------------------------------------
+function startProgress() {
+    const bar = document.getElementById('route-progress-bar');
+    if (!bar) return;
+    bar.classList.remove('opacity-0');
+    bar.style.width = '35%';
+    setTimeout(() => {
+        if (bar.style.width === '35%') bar.style.width = '75%';
+    }, 120);
+}
+
+function finishProgress() {
+    const bar = document.getElementById('route-progress-bar');
+    if (!bar) return;
+    bar.style.width = '100%';
+    setTimeout(() => {
+        bar.classList.add('opacity-0');
+        setTimeout(() => {
+            bar.style.width = '0%';
+        }, 300);
+    }, 200);
+}
+
+function hidePageLoader() {
+    const loader = document.getElementById('page-loader');
+    if (loader) {
+        loader.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            loader.style.display = 'none';
+        }, 350);
+    }
+}
+
+// --------------------------------------------------------------
+// Client-side URL Routing
+// --------------------------------------------------------------
+function getRouteFromPath() {
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    if (!path || path === 'index.html' || path === 'dashboard') {
+        return 'dashboard';
+    }
+    if (['subnets', 'static', 'leases', 'clustering', 'deploy', 'settings'].includes(path)) {
+        return path;
+    }
+    return 'dashboard';
+}
+
+// Listen to browser Back / Forward buttons
+window.addEventListener('popstate', (e) => {
+    const route = (e.state && e.state.tab) ? e.state.tab : getRouteFromPath();
+    switchTab(route, false);
+});
+
 // Initialize Application
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initTheme();
     initSidebarState();
-    loadDashboardSummary();
-    loadClusterInfo();
-    loadSubnets();
-    loadStaticLeases();
-    loadLeases();
-    loadGlobalSettings();
-    loadDeployHistory();
+
+    // Determine initial route from URL
+    const initialRoute = getRouteFromPath();
+    switchTab(initialRoute, false);
+
+    // Initial data fetch for all subsystems
+    try {
+        await Promise.allSettled([
+            loadDashboardSummary(),
+            loadClusterInfo(),
+            loadSubnets(),
+            loadStaticLeases(),
+            loadLeases(),
+            loadGlobalSettings(),
+            loadDeployHistory()
+        ]);
+    } finally {
+        hidePageLoader();
+    }
 
     // Auto-refresh real-time monitoring every 10 seconds
     setInterval(() => {
@@ -119,10 +186,21 @@ function toggleMobileSidebar() {
 }
 
 // --------------------------------------------------------------
-// Sidebar Tab Navigation
+// Sidebar Tab & Multi-page Navigation
 // --------------------------------------------------------------
-function switchTab(tab) {
+function switchTab(tab, updateHistory = true) {
+    if (!tab) tab = 'dashboard';
+    startProgress();
+
     currentTab = tab;
+
+    // Update browser URL history for multi-page behavior
+    if (updateHistory) {
+        const newPath = tab === 'dashboard' ? '/' : '/' + tab;
+        if (window.location.pathname !== newPath) {
+            window.history.pushState({ tab }, '', newPath);
+        }
+    }
 
     // Close mobile drawer if open
     const sidebar = document.getElementById('app-sidebar');
@@ -153,13 +231,25 @@ function switchTab(tab) {
         activeBtn.classList.add('text-indigo-600', 'dark:text-indigo-400', 'bg-indigo-50', 'dark:bg-indigo-950/40');
     }
 
-    if (tab === 'clustering') {
+    // Refresh context data when entering specific tabs
+    if (tab === 'dashboard') {
+        loadDashboardSummary();
+    } else if (tab === 'subnets') {
+        loadSubnets();
+    } else if (tab === 'static') {
+        loadStaticLeases();
+    } else if (tab === 'leases') {
+        loadLeases();
+    } else if (tab === 'clustering') {
         loadClusterInfo();
-    }
-    if (tab === 'deploy') {
+    } else if (tab === 'deploy') {
         previewConfigs();
         loadDeployHistory();
+    } else if (tab === 'settings') {
+        loadGlobalSettings();
     }
+
+    finishProgress();
 }
 
 // --------------------------------------------------------------
@@ -245,7 +335,6 @@ async function loadDashboardSummary() {
                 sideBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20';
             }
         }
-
         // Statistical Counters
         document.getElementById('stat-subnets').innerText = s.total_subnets;
         document.getElementById('stat-pools').innerText = s.total_pools;
