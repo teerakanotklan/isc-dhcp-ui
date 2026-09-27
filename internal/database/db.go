@@ -74,11 +74,27 @@ func (db *DB) createTables() error {
 		gateway TEXT NOT NULL,
 		dns_servers TEXT DEFAULT '',
 		domain_name TEXT DEFAULT '',
+		ntp_servers TEXT DEFAULT '',
+		tftp_server TEXT DEFAULT '',
+		bootfile_name TEXT DEFAULT '',
+		lease_days INTEGER DEFAULT 0,
+		lease_hours INTEGER DEFAULT 12,
+		lease_minutes INTEGER DEFAULT 0,
 		lease_time INTEGER DEFAULT 0,
 		enable_failover BOOLEAN DEFAULT 1,
 		description TEXT DEFAULT '',
+		custom_options TEXT DEFAULT '',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
+
+	-- Migrations for existing databases
+	ALTER TABLE subnets ADD COLUMN ntp_servers TEXT DEFAULT '';
+	ALTER TABLE subnets ADD COLUMN tftp_server TEXT DEFAULT '';
+	ALTER TABLE subnets ADD COLUMN bootfile_name TEXT DEFAULT '';
+	ALTER TABLE subnets ADD COLUMN lease_days INTEGER DEFAULT 0;
+	ALTER TABLE subnets ADD COLUMN lease_hours INTEGER DEFAULT 12;
+	ALTER TABLE subnets ADD COLUMN lease_minutes INTEGER DEFAULT 0;
+	ALTER TABLE subnets ADD COLUMN custom_options TEXT DEFAULT '';
 
 	CREATE TABLE IF NOT EXISTS pools (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -204,7 +220,11 @@ func (db *DB) GetNodes() ([]models.Node, error) {
 
 // Subnets & Pools
 func (db *DB) GetSubnets() ([]models.Subnet, error) {
-	rows, err := db.conn.Query(`SELECT id, network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, lease_time, enable_failover, description, created_at FROM subnets ORDER BY network_address ASC`)
+	rows, err := db.conn.Query(`SELECT id, network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, 
+		COALESCE(ntp_servers, ''), COALESCE(tftp_server, ''), COALESCE(bootfile_name, ''), 
+		COALESCE(lease_days, 0), COALESCE(lease_hours, 12), COALESCE(lease_minutes, 0), lease_time, 
+		enable_failover, description, COALESCE(custom_options, ''), created_at 
+		FROM subnets ORDER BY network_address ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +233,12 @@ func (db *DB) GetSubnets() ([]models.Subnet, error) {
 	var subnets []models.Subnet
 	for rows.Next() {
 		var s models.Subnet
-		if err := rows.Scan(&s.ID, &s.NetworkAddress, &s.Netmask, &s.CIDRPrefix, &s.Gateway, &s.DNSServers, &s.DomainName, &s.LeaseTime, &s.EnableFailover, &s.Description, &s.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&s.ID, &s.NetworkAddress, &s.Netmask, &s.CIDRPrefix, &s.Gateway, &s.DNSServers, &s.DomainName,
+			&s.NTPServers, &s.TFTPServer, &s.BootFileName,
+			&s.LeaseDays, &s.LeaseHours, &s.LeaseMinutes, &s.LeaseTime,
+			&s.EnableFailover, &s.Description, &s.CustomOptions, &s.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 
@@ -234,18 +259,35 @@ func (db *DB) GetSubnets() ([]models.Subnet, error) {
 }
 
 func (db *DB) SaveSubnet(s models.Subnet) (int, error) {
+	// คำนวณ LeaseTime รวมจาก Days, Hours, Minutes หากมีระบุ
+	totalSeconds := (s.LeaseDays * 86400) + (s.LeaseHours * 3600) + (s.LeaseMinutes * 60)
+	if totalSeconds > 0 {
+		s.LeaseTime = totalSeconds
+	} else if s.LeaseTime == 0 {
+		s.LeaseTime = 43200 // default 12 hours
+	}
+
 	if s.ID == 0 {
-		res, err := db.conn.Exec(`INSERT INTO subnets (network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, lease_time, enable_failover, description)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			s.NetworkAddress, s.Netmask, s.CIDRPrefix, s.Gateway, s.DNSServers, s.DomainName, s.LeaseTime, s.EnableFailover, s.Description)
+		res, err := db.conn.Exec(`INSERT INTO subnets 
+			(network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			s.NetworkAddress, s.Netmask, s.CIDRPrefix, s.Gateway, s.DNSServers, s.DomainName,
+			s.NTPServers, s.TFTPServer, s.BootFileName, s.LeaseDays, s.LeaseHours, s.LeaseMinutes, s.LeaseTime,
+			s.EnableFailover, s.Description, s.CustomOptions)
 		if err != nil {
 			return 0, err
 		}
 		id, _ := res.LastInsertId()
 		return int(id), nil
 	}
-	_, err := db.conn.Exec(`UPDATE subnets SET network_address=?, netmask=?, cidr_prefix=?, gateway=?, dns_servers=?, domain_name=?, lease_time=?, enable_failover=?, description=? WHERE id=?`,
-		s.NetworkAddress, s.Netmask, s.CIDRPrefix, s.Gateway, s.DNSServers, s.DomainName, s.LeaseTime, s.EnableFailover, s.Description, s.ID)
+	_, err := db.conn.Exec(`UPDATE subnets SET 
+		network_address=?, netmask=?, cidr_prefix=?, gateway=?, dns_servers=?, domain_name=?, 
+		ntp_servers=?, tftp_server=?, bootfile_name=?, lease_days=?, lease_hours=?, lease_minutes=?, lease_time=?, 
+		enable_failover=?, description=?, custom_options=? 
+		WHERE id=?`,
+		s.NetworkAddress, s.Netmask, s.CIDRPrefix, s.Gateway, s.DNSServers, s.DomainName,
+		s.NTPServers, s.TFTPServer, s.BootFileName, s.LeaseDays, s.LeaseHours, s.LeaseMinutes, s.LeaseTime,
+		s.EnableFailover, s.Description, s.CustomOptions, s.ID)
 	return s.ID, err
 }
 

@@ -36,9 +36,16 @@ type Subnet struct {
 	Gateway        string    `json:"gateway"`
 	DNSServers     string    `json:"dns_servers"`
 	DomainName     string    `json:"domain_name"`
+	NTPServers     string    `json:"ntp_servers"`
+	TFTPServer     string    `json:"tftp_server"`
+	BootFileName   string    `json:"bootfile_name"`
+	LeaseDays      int       `json:"lease_days"`
+	LeaseHours     int       `json:"lease_hours"`
+	LeaseMinutes   int       `json:"lease_minutes"`
 	LeaseTime      int       `json:"lease_time"`
 	EnableFailover bool      `json:"enable_failover"`
 	Description    string    `json:"description"`
+	CustomOptions  string    `json:"custom_options"`
 	Pools          []Pool    `json:"pools,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 }
