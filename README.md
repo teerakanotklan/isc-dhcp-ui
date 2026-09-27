@@ -2,111 +2,161 @@
 
 A modern Web UI and Agent for managing ISC DHCP Server in standalone or High-Availability / Failover clusters.
 
+**Stack:** React 18 + Vite + TypeScript + Tailwind CSS (frontend) · Go + SQLite (backend)
+
 ---
 
 ## Features
-- **Dashboard & Monitoring**: View DHCP status, active leases, statistics, and failover peer states.
-- **Subnet & Pool Management**: Manage subnets, IP ranges, gateway, and DNS options.
-- **Static Leases (Reservations)**: Reserve fixed IP addresses for MAC addresses.
-- **Configuration Generator**: Automatically generate valid, production-ready `dhcpd.conf` configurations.
-- **Agent / Controller Architecture**: Centralized management with an agent to control local/remote ISC DHCP server instances.
-- **Automated Setup Wizard**: Interactive installation script with automatic systemd and database configuration.
+
+- **Dashboard & Monitoring** — DHCP status, active leases, statistics, and failover peer states
+- **Subnet & Pool Management** — Manage subnets, IP ranges, gateway, and DNS options
+- **Static Leases (Reservations)** — Reserve fixed IPs for specific MAC addresses
+- **Clustering** — Configure primary / secondary failover nodes
+- **Configuration Generator** — Auto-generate valid `dhcpd.conf` with one-click deploy
+- **Multi-page SPA** — `/dashboard`, `/subnets`, `/static`, `/leases`, `/clustering`, `/deploy`, `/settings`
+- **Light / Dark mode** — Instant theme toggle with no transition flicker
+- **Responsive UI** — Collapsible sidebar, mobile drawer navigation
+
+---
+
+## Architecture
+
+```
+Browser ──HTTPS──▶ Go Controller (port 8080)
+                        │
+                        ├── Serves embedded React SPA (web/dist/)
+                        ├── REST API  /api/...
+                        └── HTTP ──▶ Go Agent (port 9443) on secondary node
+                                         └── Writes dhcpd.conf, restarts dhcpd
+```
+
+The controller binary **embeds** the React production build via `//go:embed all:dist`, so **no Node.js is needed in production** — a single binary serves everything.
 
 ---
 
 ## Quick Start (Interactive Setup Wizard)
 
-The fastest and recommended way to deploy `isc-dhcp-ui` on Linux (Ubuntu / Debian / Raspberry Pi OS):
+Deploy on Linux (Ubuntu / Debian / Raspberry Pi OS):
 
 ```bash
-git clone https://github.com/your-repo/isc-dhcp-ui.git
+git clone https://github.com/teerakanotklan/isc-dhcp-ui.git
 cd isc-dhcp-ui
 chmod +x setup.sh
 sudo ./setup.sh
 ```
 
-The interactive wizard will guide you through:
-1. **Dependency check**: Automatically installs `isc-dhcp-server`, `build-essential`, `golang`, `sqlite3`, and `curl` if missing.
-2. **Role selection**:
-   - `1) Full Setup (Controller + Primary DHCP Node)`: All-in-one or Master cluster node.
-   - `2) Agent Only (Secondary Node)`: Lightweight agent for remote or failover DHCP server.
-   - `3) Controller Only`: Central web management server without local DHCP service.
-   - `4) Development Mode`: Local compilation for testing without installing system services.
-3. **Interactive configuration**: Set web port (default `8080`), agent port (`9443`), credentials, cluster node IPs, and default subnet.
-4. **Automated deployment**: Compiles binaries, initializes SQLite database, creates and starts Systemd services, and configures UFW firewall.
-
----
-
-## Service Management & CLI Commands
-
-Once installed via the wizard, manage your services effortlessly:
-
-```bash
-# Check service status (Dashboard & DHCP health)
-sudo ./setup.sh --status
-
-# View service logs
-journalctl -u dhcp-ui-controller -f
-journalctl -u dhcp-ui-agent -f
-
-# Restart services
-sudo systemctl restart dhcp-ui-controller
-sudo systemctl restart dhcp-ui-agent
-
-# Uninstall services and clean files
-sudo ./setup.sh --uninstall
-```
+The wizard will:
+1. Check and install dependencies (`isc-dhcp-server`, `golang`, `sqlite3`, `build-essential`)
+2. Let you choose a role: Full Setup, Agent Only, Controller Only, or Development Mode
+3. Configure ports, credentials, cluster IPs, and default subnet
+4. Compile binaries, initialize the SQLite DB, create and start systemd services
 
 ---
 
 ## Developer Guide
 
-### Linux / macOS (Makefile)
+### Prerequisites
+
+| Tool | Version |
+|------|---------|
+| Go   | 1.21+   |
+| Node.js | 18+ (LTS) |
+| npm  | 9+      |
+
+### Build (Linux / macOS)
 
 ```bash
-# Build both controller and agent binaries into bin/
+# Build React frontend → web/dist/, then compile both Go binaries
 make build
+
+# Or step-by-step:
+make build-frontend     # npm run build inside frontend/
+make build-controller   # go build (embeds web/dist/)
+make build-agent        # go build
+
+# Start Vite dev server with hot-reload (proxy to Go backend)
+make dev
 
 # Run unit tests
 make test
 
-# Run controller locally (Web UI at http://localhost:8080)
+# Run controller locally (http://localhost:8080)
 make run-controller
 
-# Run agent locally
-make run-agent
+# Remove binaries and web/dist/
+make clean
 ```
 
 ### Windows (PowerShell)
 
-For local development on Windows:
 ```powershell
+# Interactive dev helper
 .\setup.ps1
+
+# Or manually:
+cd frontend; npm install; npm run build; cd ..
+go build -o bin\controller.exe .\cmd\controller
+go build -o bin\agent.exe .\cmd\agent
 ```
-Follow the interactive prompt to build binaries or run the controller locally.
+
+---
+
+## Service Management
+
+```bash
+# Status
+sudo ./setup.sh --status
+journalctl -u dhcp-ui-controller -f
+journalctl -u dhcp-ui-agent -f
+
+# Restart
+sudo systemctl restart dhcp-ui-controller
+sudo systemctl restart dhcp-ui-agent
+
+# Uninstall
+sudo ./setup.sh --uninstall
+```
 
 ---
 
 ## Project Structure
 
-```text
+```
+isc-dhcp-ui/
 ├── cmd/
-│   ├── controller/         # Web UI backend & API server
-│   └── agent/              # Node agent for dhcpd.conf deploy & status
+│   ├── controller/         # Web UI backend & REST API server
+│   └── agent/              # Lightweight agent (writes dhcpd.conf, restarts dhcpd)
 ├── internal/
-│   ├── database/           # SQLite database schema & queries
+│   ├── database/           # SQLite schema & queries
 │   ├── generator/          # dhcpd.conf configuration generator
-│   ├── models/             # Data structures & domain models
-│   ├── parser/             # dhcpd.leases parser & failover analyzer
-│   ├── service/            # Linux systemctl & syntax checking
-│   └── syncer/             # HTTP client for Controller -> Agent communication
-├── systemd/
-│   ├── dhcp-ui-controller.service # Systemd unit template for Controller
-│   └── dhcp-ui-agent.service      # Systemd unit template for Agent
+│   ├── models/             # Go data structs (Subnet, Node, Lease, …)
+│   ├── parser/             # dhcpd.leases parser & failover state reader
+│   ├── service/            # systemctl wrapper & syntax checker
+│   └── syncer/             # HTTP client: Controller → Agent communication
+├── frontend/               # React + Vite + TypeScript source
+│   └── src/
+│       ├── api/            # Typed fetch client (401 auto-redirect)
+│       ├── components/     # Layout (Sidebar, TopNav, …) & UI (Modal, Toast, …)
+│       ├── context/        # ThemeContext, AuthContext
+│       ├── hooks/          # Reusable custom React hooks
+│       ├── pages/          # Route-level page components
+│       └── types/          # TypeScript interfaces matching Go models
 ├── web/
-│   ├── static/             # Embedded HTML/CSS/JS frontend
-│   └── embed.go            # Go embed FS wrapper
+│   ├── dist/               # React production build (git-ignored, embedded in binary)
+│   └── embed.go            # //go:embed all:dist
+├── systemd/                # Systemd unit templates
 ├── Makefile                # Build automation
-├── setup.sh                # Interactive Bash Setup Wizard
+├── setup.sh                # Interactive Bash setup wizard
 └── setup.ps1               # Windows development helper
 ```
+
+---
+
+## Default Credentials
+
+| Field    | Value   |
+|----------|---------|
+| Username | `admin` |
+| Password | `admin` |
+
+> Change these immediately via **Settings → Change Password** after first login.
