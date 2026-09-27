@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -62,12 +63,12 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Embedded Static Assets
-	staticSubFS, err := fs.Sub(web.StaticFS, "static")
+	// Embedded React Vite Assets
+	distSubFS, err := fs.Sub(web.DistFS, "dist")
 	if err != nil {
 		log.Fatalf("Failed to sub embed fs: %v", err)
 	}
-	fileServer := http.FileServer(http.FS(staticSubFS))
+	fileServer := http.FileServer(http.FS(distSubFS))
 
 	// Auth APIs
 	mux.HandleFunc("POST /api/login", srv.handleLogin)
@@ -99,15 +100,44 @@ func main() {
 	mux.HandleFunc("DELETE /api/cluster", srv.auth(srv.handleDeleteCluster))
 	mux.HandleFunc("POST /api/cluster/test", srv.auth(srv.handleTestCluster))
 
-	// Static routes
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
-			if !srv.isAuthenticated(r) {
-				http.Redirect(w, r, "/login.html", http.StatusFound)
-				return
-			}
+	// Helper to serve index.html for React SPA
+	serveIndexHTML := func(w http.ResponseWriter, r *http.Request) {
+		f, err := distSubFS.Open("index.html")
+		if err != nil {
+			http.Error(w, "index.html not found", http.StatusInternalServerError)
+			return
 		}
-		fileServer.ServeHTTP(w, r)
+		defer f.Close()
+		stat, _ := f.Stat()
+		http.ServeContent(w, r, "index.html", stat.ModTime(), f.(io.ReadSeeker))
+	}
+
+	// SPA Routing & Static Assets
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		cleanPath := strings.TrimSuffix(r.URL.Path, "/")
+		if cleanPath == "" {
+			cleanPath = "/"
+		}
+
+		// Static assets (like /assets/...) served directly
+		if strings.HasPrefix(r.URL.Path, "/assets/") {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Public SPA routes
+		if cleanPath == "/login" {
+			serveIndexHTML(w, r)
+			return
+		}
+
+		// All other SPA routes require authentication
+		if !srv.isAuthenticated(r) {
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+
+		serveIndexHTML(w, r)
 	})
 
 	addr := fmt.Sprintf("0.0.0.0:%d", *port)
