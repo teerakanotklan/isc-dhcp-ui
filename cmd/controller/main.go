@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -99,14 +100,41 @@ func main() {
 	mux.HandleFunc("DELETE /api/cluster", srv.auth(srv.handleDeleteCluster))
 	mux.HandleFunc("POST /api/cluster/test", srv.auth(srv.handleTestCluster))
 
-	// Static routes
+	// Multi-page UI and Static routes
+	pageRoutes := map[string]bool{
+		"/":           true,
+		"/dashboard":  true,
+		"/subnets":    true,
+		"/static":     true,
+		"/leases":     true,
+		"/clustering": true,
+		"/deploy":     true,
+		"/settings":   true,
+		"/index.html": true,
+	}
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+		cleanPath := strings.TrimSuffix(r.URL.Path, "/")
+		if cleanPath == "" {
+			cleanPath = "/"
+		}
+
+		if pageRoutes[cleanPath] {
 			if !srv.isAuthenticated(r) {
 				http.Redirect(w, r, "/login.html", http.StatusFound)
 				return
 			}
+			f, err := staticSubFS.Open("index.html")
+			if err != nil {
+				http.Error(w, "index.html not found", http.StatusInternalServerError)
+				return
+			}
+			defer f.Close()
+			stat, _ := f.Stat()
+			http.ServeContent(w, r, "index.html", stat.ModTime(), f.(io.ReadSeeker))
+			return
 		}
+
 		fileServer.ServeHTTP(w, r)
 	})
 
