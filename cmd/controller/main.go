@@ -29,6 +29,7 @@ var (
 	dbPath     = flag.String("db", "/opt/dhcp-ui/dhcp.db", "SQLite database path")
 	leasesPath = flag.String("leases", "/var/lib/dhcp/dhcpd.leases", "Path to dhcpd.leases")
 	confPath   = flag.String("config", "/etc/dhcp/dhcpd.conf", "Path to dhcpd.conf")
+	caCertPath = flag.String("ca", "/opt/dhcp-ui/ca.pem", "Path to shared CA certificate for mTLS")
 )
 
 type Server struct {
@@ -92,6 +93,11 @@ func main() {
 
 	mux.HandleFunc("GET /api/settings", srv.auth(srv.handleGetSettings))
 	mux.HandleFunc("POST /api/settings", srv.auth(srv.handleSaveSettings))
+
+	mux.HandleFunc("GET /api/cluster", srv.auth(srv.handleGetCluster))
+	mux.HandleFunc("POST /api/cluster", srv.auth(srv.handleSaveCluster))
+	mux.HandleFunc("DELETE /api/cluster", srv.auth(srv.handleDeleteCluster))
+	mux.HandleFunc("POST /api/cluster/test", srv.auth(srv.handleTestCluster))
 
 	// Static routes
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -209,17 +215,26 @@ func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
 		pStatus = "active"
 	}
 
-	// Secondary Service Status via Agent
-	sActive, sStatus, err := s.syncer.GetRemoteStatus(
-		fmt.Sprintf("http://%s:%d", secondaryNode.ManagementIP, secondaryNode.AgentPort),
-		secondaryNode.APIToken,
-	)
-	if err != nil {
-		sStatus = "offline"
-		secondaryNode.Status = "offline"
-	} else if sActive {
-		sStatus = "active"
-		secondaryNode.Status = "online"
+	// Secondary Service Status via Agent (if clustered)
+	sStatus := "not_configured"
+	if secondaryNode.ManagementIP != "" && secondaryNode.DHCPIP != "" {
+		sActive, sStat, err := s.syncer.GetRemoteStatus(
+			fmt.Sprintf("http://%s:%d", secondaryNode.ManagementIP, secondaryNode.AgentPort),
+			secondaryNode.APIToken,
+		)
+		if err != nil {
+			sStatus = "offline"
+			secondaryNode.Status = "offline"
+		} else if sActive {
+			sStatus = "active"
+			secondaryNode.Status = "online"
+		} else {
+			sStatus = sStat
+			secondaryNode.Status = sStat
+		}
+	} else {
+		secondaryNode.Status = "not_configured"
+		secondaryNode.Name = "None (Standalone)"
 	}
 
 	// Parse local leases & failover status
@@ -406,11 +421,28 @@ func (s *Server) handleConfigDeploy(w http.ResponseWriter, r *http.Request) {
 	confPrimary := generator.GenerateDHCPConfig("primary", primaryNode, secondaryNode, global, subnets, staticLeases)
 	confSecondary := generator.GenerateDHCPConfig("secondary", primaryNode, secondaryNode, global, subnets, staticLeases)
 
+	// Check if clustering is active
+	isClustered := secondaryNode.ManagementIP != "" && secondaryNode.DHCPIP != ""
+
 	// Step 1: Pre-flight syntax validation for Primary
 	validP, outP, err := service.ValidateConfigSyntax(confPrimary)
 	if !validP || err != nil {
 		s.recordDeployHistory(req.CommitMessage, confPrimary, confSecondary, "failed", "Primary syntax error: "+outP)
 		s.jsonResponse(w, http.StatusBadRequest, false, "Primary syntax validation failed", outP)
+		return
+	}
+
+	if !isClustered {
+		// Standalone Mode: Deploy only to primary/local node
+		priMsg, err := service.DeployConfig(confPrimary, *confPath)
+		if err != nil {
+			s.recordDeployHistory(req.CommitMessage, confPrimary, "", "failed", "Deploy error: "+err.Error())
+			s.jsonResponse(w, http.StatusInternalServerError, false, "Failed to deploy configuration", err.Error())
+			return
+		}
+		successMsg := fmt.Sprintf("Standalone Config Deployed Successfully!\n%s", priMsg)
+		s.recordDeployHistory(req.CommitMessage, confPrimary, "", "success", successMsg)
+		s.jsonResponse(w, http.StatusOK, true, successMsg, "")
 		return
 	}
 
@@ -491,6 +523,95 @@ func (s *Server) handleSaveSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.json(w, http.StatusOK, true, "Settings saved", nil)
+}
+
+// 7. Clustering Management
+func (s *Server) handleGetCluster(w http.ResponseWriter, r *http.Request) {
+	primary, secondary, hasSecondary, err := s.db.GetClusterNodes()
+	if err != nil {
+		s.json(w, http.StatusInternalServerError, false, err.Error(), nil)
+		return
+	}
+	_, failover, _ := parser.ParseLeasesFile(*leasesPath)
+	mode := "standalone"
+	if hasSecondary {
+		mode = "failover"
+	}
+	info := models.ClusterInfo{
+		IsClustered:    hasSecondary,
+		ClusterMode:    mode,
+		PrimaryNode:    primary,
+		SecondaryNode:  secondary,
+		FailoverStatus: failover,
+	}
+	s.json(w, http.StatusOK, true, "Cluster info retrieved", info)
+}
+
+func (s *Server) handleSaveCluster(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Primary   models.Node `json:"primary_node"`
+		Secondary models.Node `json:"secondary_node"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.json(w, http.StatusBadRequest, false, "Invalid payload", nil)
+		return
+	}
+	req.Primary.Role = "primary"
+	if req.Primary.Name == "" {
+		req.Primary.Name = "dhcp1"
+	}
+	if err := s.db.SaveNode(req.Primary); err != nil {
+		s.json(w, http.StatusInternalServerError, false, "Failed to save primary node: "+err.Error(), nil)
+		return
+	}
+
+	req.Secondary.Role = "secondary"
+	if req.Secondary.Name == "" {
+		req.Secondary.Name = "dhcp2"
+	}
+	if err := s.db.SaveNode(req.Secondary); err != nil {
+		s.json(w, http.StatusInternalServerError, false, "Failed to save secondary node: "+err.Error(), nil)
+		return
+	}
+
+	s.json(w, http.StatusOK, true, "Cluster configuration saved successfully", nil)
+}
+
+func (s *Server) handleDeleteCluster(w http.ResponseWriter, r *http.Request) {
+	if err := s.db.DeleteSecondaryNode(); err != nil {
+		s.json(w, http.StatusInternalServerError, false, "Failed to disband cluster: "+err.Error(), nil)
+		return
+	}
+	s.json(w, http.StatusOK, true, "Cluster disbanded. System reverted to standalone mode.", nil)
+}
+
+func (s *Server) handleTestCluster(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ManagementIP string `json:"management_ip"`
+		AgentPort    int    `json:"agent_port"`
+		APIToken     string `json:"api_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.json(w, http.StatusBadRequest, false, "Invalid payload", nil)
+		return
+	}
+	if req.AgentPort == 0 {
+		req.AgentPort = 9443
+	}
+	url := fmt.Sprintf("http://%s:%d", req.ManagementIP, req.AgentPort)
+	active, status, err := s.syncer.GetRemoteStatus(url, req.APIToken)
+	if err != nil {
+		s.json(w, http.StatusOK, false, fmt.Sprintf("Agent connection failed: %v", err), map[string]interface{}{
+			"reachable": false,
+			"error":     err.Error(),
+		})
+		return
+	}
+	s.json(w, http.StatusOK, true, fmt.Sprintf("Connection successful! Remote status: %s (Active: %v)", status, active), map[string]interface{}{
+		"reachable": true,
+		"active":    active,
+		"status":    status,
+	})
 }
 
 func (s *Server) json(w http.ResponseWriter, status int, success bool, msg string, data interface{}) {

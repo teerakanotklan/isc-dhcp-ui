@@ -23,6 +23,8 @@ type Node struct {
 	DHCPIP       string    `json:"dhcp_ip"`
 	AgentPort    int       `json:"agent_port"`
 	APIToken     string    `json:"api_token"`
+	CertFile     string    `json:"cert_file,omitempty"`
+	KeyFile      string    `json:"key_file,omitempty"`
 	Status       string    `json:"status"` // online, offline, error
 	LastSeen     time.Time `json:"last_seen"`
 }
@@ -114,4 +116,13 @@ type ClusterSummary struct {
 	ActiveLeases     int            `json:"active_leases"`
 	PrimaryService   string         `json:"primary_service_status"`
 	SecondaryService string         `json:"secondary_service_status"`
+}
+
+// ClusterInfo represents cluster configuration and state
+type ClusterInfo struct {
+	IsClustered    bool           `json:"is_clustered"`
+	ClusterMode    string         `json:"cluster_mode"` // "standalone" or "failover"
+	PrimaryNode    Node           `json:"primary_node"`
+	SecondaryNode  Node           `json:"secondary_node"`
+	FailoverStatus FailoverStatus `json:"failover_status"`
 }

@@ -61,10 +61,15 @@ func (db *DB) createTables() error {
 		management_ip TEXT NOT NULL,
 		dhcp_ip TEXT NOT NULL,
 		agent_port INTEGER DEFAULT 9443,
-		api_token TEXT NOT NULL,
+		api_token TEXT DEFAULT '',
+		cert_file TEXT DEFAULT '',
+		key_file TEXT DEFAULT '',
 		status TEXT DEFAULT 'unknown',
 		last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
+
+	-- Migrations for existing databases
+	ALTER TABLE nodes ADD COLUMN api_token TEXT DEFAULT '';
 
 	CREATE TABLE IF NOT EXISTS subnets (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,23 +101,28 @@ func (db *DB) createTables() error {
 	ALTER TABLE subnets ADD COLUMN lease_minutes INTEGER DEFAULT 0;
 	ALTER TABLE subnets ADD COLUMN custom_options TEXT DEFAULT '';
 
+	ALTER TABLE nodes ADD COLUMN cert_file TEXT DEFAULT '';
+	ALTER TABLE nodes ADD COLUMN key_file TEXT DEFAULT '';
+
 	CREATE TABLE IF NOT EXISTS pools (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		subnet_id INTEGER NOT NULL REFERENCES subnets(id) ON DELETE CASCADE,
+		subnet_id INTEGER NOT NULL,
 		range_start TEXT NOT NULL,
 		range_end TEXT NOT NULL,
 		deny_unknown_clients BOOLEAN DEFAULT 0,
-		failover_peer_name TEXT DEFAULT 'dhcp-failover'
+		failover_peer_name TEXT DEFAULT 'dhcp-failover',
+		FOREIGN KEY (subnet_id) REFERENCES subnets(id) ON DELETE CASCADE
 	);
 
 	CREATE TABLE IF NOT EXISTS static_leases (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		subnet_id INTEGER NOT NULL REFERENCES subnets(id) ON DELETE CASCADE,
+		subnet_id INTEGER NOT NULL,
 		hostname TEXT NOT NULL,
-		mac_address TEXT NOT NULL UNIQUE,
-		ip_address TEXT NOT NULL UNIQUE,
+		mac_address TEXT NOT NULL,
+		ip_address TEXT NOT NULL,
 		description TEXT DEFAULT '',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (subnet_id) REFERENCES subnets(id) ON DELETE CASCADE
 	);
 
 	CREATE TABLE IF NOT EXISTS deployment_history (
@@ -131,44 +141,43 @@ func (db *DB) createTables() error {
 }
 
 func (db *DB) seedDefaults() error {
-	// 1. User admin / admin
-	var count int
-	_ = db.conn.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
-	if count == 0 {
-		_, err := db.conn.Exec("INSERT INTO users (username, password) VALUES (?, ?)", "admin", "admin")
+	// Seed Admin User (admin / password)
+	var userCount int
+	_ = db.conn.QueryRow("SELECT COUNT(*) FROM users").Scan(&userCount)
+	if userCount == 0 {
+		_, err := db.conn.Exec("INSERT INTO users (username, password) VALUES ('admin', 'password')")
 		if err != nil {
 			return err
 		}
 	}
 
-	// 2. Global settings
-	count = 0
-	_ = db.conn.QueryRow("SELECT COUNT(*) FROM global_settings").Scan(&count)
-	if count == 0 {
-		_, err := db.conn.Exec(`INSERT INTO global_settings 
-			(domain_name, dns_servers, default_lease_time, max_lease_time, authoritative, custom_options) 
+	// Seed Global Settings
+	var settingsCount int
+	_ = db.conn.QueryRow("SELECT COUNT(*) FROM global_settings").Scan(&settingsCount)
+	if settingsCount == 0 {
+		_, err := db.conn.Exec(`INSERT INTO global_settings (domain_name, dns_servers, default_lease_time, max_lease_time, authoritative, custom_options)
 			VALUES ('lab.local', '192.168.153.2, 8.8.8.8', 43200, 86400, 1, '')`)
 		if err != nil {
 			return err
 		}
 	}
 
-	// 3. Nodes (dhcp1 primary, dhcp2 secondary)
-	count = 0
-	_ = db.conn.QueryRow("SELECT COUNT(*) FROM nodes").Scan(&count)
-	if count == 0 {
-		_, _ = db.conn.Exec(`INSERT INTO nodes (name, role, management_ip, dhcp_ip, agent_port, api_token, status)
-			VALUES ('dhcp1', 'primary', '192.168.153.159', '192.168.153.159', 9443, 'dhcp-secret-token-2026', 'online')`)
-		_, _ = db.conn.Exec(`INSERT INTO nodes (name, role, management_ip, dhcp_ip, agent_port, api_token, status)
-			VALUES ('dhcp2', 'secondary', '192.168.153.160', '192.168.153.160', 9443, 'dhcp-secret-token-2026', 'online')`)
+	// Seed Primary Node
+	var nodeCount int
+	_ = db.conn.QueryRow("SELECT COUNT(*) FROM nodes").Scan(&nodeCount)
+	if nodeCount == 0 {
+		_, err := db.conn.Exec(`INSERT INTO nodes (name, role, management_ip, dhcp_ip, agent_port, cert_file, key_file, status)
+			VALUES ('dhcp1', 'primary', '127.0.0.1', '192.168.153.159', 9443, '', '', 'online')`)
+		if err != nil {
+			return err
+		}
 	}
 
-	// 4. Default Subnet & Pool (192.168.153.0/24)
-	count = 0
-	_ = db.conn.QueryRow("SELECT COUNT(*) FROM subnets").Scan(&count)
-	if count == 0 {
-		res, err := db.conn.Exec(`INSERT INTO subnets 
-			(network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options)
+	// Seed Sample Subnet & Pool (Windows DHCP Scope style)
+	var subnetCount int
+	_ = db.conn.QueryRow("SELECT COUNT(*) FROM subnets").Scan(&subnetCount)
+	if subnetCount == 0 {
+		res, err := db.conn.Exec(`INSERT INTO subnets (network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options)
 			VALUES ('192.168.153.0', '255.255.255.0', 24, '192.168.153.2', '192.168.153.2, 8.8.8.8', 'lab.local', '192.168.153.2', '', '', 8, 0, 0, 691200, 1, 'Default Lab Subnet', '')`)
 		if err == nil {
 			subnetID, _ := res.LastInsertId()
@@ -201,7 +210,7 @@ func (db *DB) UpdateGlobalSettings(g models.GlobalSettings) error {
 
 // Nodes
 func (db *DB) GetNodes() ([]models.Node, error) {
-	rows, err := db.conn.Query(`SELECT id, name, role, management_ip, dhcp_ip, agent_port, api_token, status, last_seen FROM nodes ORDER BY role ASC`)
+	rows, err := db.conn.Query(`SELECT id, name, role, management_ip, dhcp_ip, agent_port, COALESCE(api_token, ''), status, last_seen FROM nodes ORDER BY role ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -218,13 +227,49 @@ func (db *DB) GetNodes() ([]models.Node, error) {
 	return nodes, nil
 }
 
-// Subnets & Pools
+func (db *DB) SaveNode(n models.Node) error {
+	var existingID int
+	err := db.conn.QueryRow("SELECT id FROM nodes WHERE role=?", n.Role).Scan(&existingID)
+	if err != nil {
+		_, err = db.conn.Exec(`INSERT INTO nodes (name, role, management_ip, dhcp_ip, agent_port, api_token, status, last_seen)
+			VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+			n.Name, n.Role, n.ManagementIP, n.DHCPIP, n.AgentPort, n.APIToken, n.Status)
+		return err
+	}
+	_, err = db.conn.Exec(`UPDATE nodes SET name=?, management_ip=?, dhcp_ip=?, agent_port=?, api_token=?, status=?, last_seen=CURRENT_TIMESTAMP WHERE id=?`,
+		n.Name, n.ManagementIP, n.DHCPIP, n.AgentPort, n.APIToken, n.Status, existingID)
+	return err
+}
+
+func (db *DB) DeleteSecondaryNode() error {
+	_, err := db.conn.Exec("DELETE FROM nodes WHERE role='secondary'")
+	return err
+}
+
+func (db *DB) GetClusterNodes() (models.Node, models.Node, bool, error) {
+	nodes, err := db.GetNodes()
+	if err != nil {
+		return models.Node{}, models.Node{}, false, err
+	}
+	var primary, secondary models.Node
+	var hasSecondary bool
+	for _, n := range nodes {
+		if n.Role == "primary" {
+			primary = n
+		} else if n.Role == "secondary" {
+			secondary = n
+			if secondary.DHCPIP != "" {
+				hasSecondary = true
+			}
+		}
+	}
+	return primary, secondary, hasSecondary, nil
+}
+
+// Subnets & Pools CRUD
 func (db *DB) GetSubnets() ([]models.Subnet, error) {
-	rows, err := db.conn.Query(`SELECT id, network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, 
-		COALESCE(ntp_servers, ''), COALESCE(tftp_server, ''), COALESCE(bootfile_name, ''), 
-		COALESCE(lease_days, 0), COALESCE(lease_hours, 12), COALESCE(lease_minutes, 0), lease_time, 
-		enable_failover, description, COALESCE(custom_options, ''), created_at 
-		FROM subnets ORDER BY network_address ASC`)
+	rows, err := db.conn.Query(`SELECT id, network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options, created_at 
+		FROM subnets ORDER BY id ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -234,42 +279,32 @@ func (db *DB) GetSubnets() ([]models.Subnet, error) {
 	for rows.Next() {
 		var s models.Subnet
 		if err := rows.Scan(
-			&s.ID, &s.NetworkAddress, &s.Netmask, &s.CIDRPrefix, &s.Gateway, &s.DNSServers, &s.DomainName,
-			&s.NTPServers, &s.TFTPServer, &s.BootFileName,
+			&s.ID, &s.NetworkAddress, &s.Netmask, &s.CIDRPrefix, &s.Gateway,
+			&s.DNSServers, &s.DomainName, &s.NTPServers, &s.TFTPServer, &s.BootFileName,
 			&s.LeaseDays, &s.LeaseHours, &s.LeaseMinutes, &s.LeaseTime,
 			&s.EnableFailover, &s.Description, &s.CustomOptions, &s.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
 
-		// ดึง pools ของ subnet นี้
-		pRows, pErr := db.conn.Query(`SELECT id, subnet_id, range_start, range_end, deny_unknown_clients, failover_peer_name FROM pools WHERE subnet_id=?`, s.ID)
-		if pErr == nil {
-			for pRows.Next() {
-				var p models.Pool
-				_ = pRows.Scan(&p.ID, &p.SubnetID, &p.RangeStart, &p.RangeEnd, &p.DenyUnknownClients, &p.FailoverPeerName)
-				s.Pools = append(s.Pools, p)
-			}
-			pRows.Close()
+		pools, err := db.GetPoolsBySubnet(s.ID)
+		if err == nil {
+			s.Pools = pools
 		}
-
 		subnets = append(subnets, s)
 	}
 	return subnets, nil
 }
 
 func (db *DB) SaveSubnet(s models.Subnet) (int, error) {
-	// Calculate total seconds from Days, Hours, Minutes if present
 	totalSeconds := (s.LeaseDays * 86400) + (s.LeaseHours * 3600) + (s.LeaseMinutes * 60)
-	if totalSeconds > 0 {
-		s.LeaseTime = totalSeconds
-	} else if s.LeaseTime == 0 {
-		s.LeaseTime = 43200 // default 12 hours
+	if totalSeconds <= 0 {
+		totalSeconds = 43200 // default 12h
 	}
+	s.LeaseTime = totalSeconds
 
 	if s.ID == 0 {
-		res, err := db.conn.Exec(`INSERT INTO subnets 
-			(network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options)
+		res, err := db.conn.Exec(`INSERT INTO subnets (network_address, netmask, cidr_prefix, gateway, dns_servers, domain_name, ntp_servers, tftp_server, bootfile_name, lease_days, lease_hours, lease_minutes, lease_time, enable_failover, description, custom_options)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			s.NetworkAddress, s.Netmask, s.CIDRPrefix, s.Gateway, s.DNSServers, s.DomainName,
 			s.NTPServers, s.TFTPServer, s.BootFileName, s.LeaseDays, s.LeaseHours, s.LeaseMinutes, s.LeaseTime,
@@ -280,10 +315,8 @@ func (db *DB) SaveSubnet(s models.Subnet) (int, error) {
 		id, _ := res.LastInsertId()
 		return int(id), nil
 	}
-	_, err := db.conn.Exec(`UPDATE subnets SET 
-		network_address=?, netmask=?, cidr_prefix=?, gateway=?, dns_servers=?, domain_name=?, 
-		ntp_servers=?, tftp_server=?, bootfile_name=?, lease_days=?, lease_hours=?, lease_minutes=?, lease_time=?, 
-		enable_failover=?, description=?, custom_options=? 
+
+	_, err := db.conn.Exec(`UPDATE subnets SET network_address=?, netmask=?, cidr_prefix=?, gateway=?, dns_servers=?, domain_name=?, ntp_servers=?, tftp_server=?, bootfile_name=?, lease_days=?, lease_hours=?, lease_minutes=?, lease_time=?, enable_failover=?, description=?, custom_options=? 
 		WHERE id=?`,
 		s.NetworkAddress, s.Netmask, s.CIDRPrefix, s.Gateway, s.DNSServers, s.DomainName,
 		s.NTPServers, s.TFTPServer, s.BootFileName, s.LeaseDays, s.LeaseHours, s.LeaseMinutes, s.LeaseTime,
@@ -292,88 +325,118 @@ func (db *DB) SaveSubnet(s models.Subnet) (int, error) {
 }
 
 func (db *DB) DeleteSubnet(id int) error {
-	_, err := db.conn.Exec(`DELETE FROM subnets WHERE id=?`, id)
+	_, err := db.conn.Exec("DELETE FROM subnets WHERE id=?", id)
 	return err
 }
 
-func (db *DB) SavePool(p models.Pool) error {
-	if p.ID == 0 {
-		_, err := db.conn.Exec(`INSERT INTO pools (subnet_id, range_start, range_end, deny_unknown_clients, failover_peer_name)
-			VALUES (?, ?, ?, ?, ?)`, p.SubnetID, p.RangeStart, p.RangeEnd, p.DenyUnknownClients, p.FailoverPeerName)
-		return err
-	}
-	_, err := db.conn.Exec(`UPDATE pools SET subnet_id=?, range_start=?, range_end=?, deny_unknown_clients=?, failover_peer_name=? WHERE id=?`,
-		p.SubnetID, p.RangeStart, p.RangeEnd, p.DenyUnknownClients, p.FailoverPeerName, p.ID)
-	return err
-}
-
-func (db *DB) DeletePool(id int) error {
-	_, err := db.conn.Exec(`DELETE FROM pools WHERE id=?`, id)
-	return err
-}
-
-// Static Leases
-func (db *DB) GetStaticLeases() ([]models.StaticLease, error) {
-	rows, err := db.conn.Query(`SELECT id, subnet_id, hostname, mac_address, ip_address, description, created_at FROM static_leases ORDER BY ip_address ASC`)
+func (db *DB) GetPoolsBySubnet(subnetID int) ([]models.Pool, error) {
+	rows, err := db.conn.Query(`SELECT id, subnet_id, range_start, range_end, deny_unknown_clients, failover_peer_name 
+		FROM pools WHERE subnet_id=?`, subnetID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var leases []models.StaticLease
+	var pools []models.Pool
+	for rows.Next() {
+		var p models.Pool
+		if err := rows.Scan(&p.ID, &p.SubnetID, &p.RangeStart, &p.RangeEnd, &p.DenyUnknownClients, &p.FailoverPeerName); err != nil {
+			return nil, err
+		}
+		pools = append(pools, p)
+	}
+	return pools, nil
+}
+
+func (db *DB) SavePool(p models.Pool) error {
+	if p.FailoverPeerName == "" {
+		p.FailoverPeerName = "dhcp-failover"
+	}
+	if p.ID == 0 {
+		_, err := db.conn.Exec(`INSERT INTO pools (subnet_id, range_start, range_end, deny_unknown_clients, failover_peer_name) 
+			VALUES (?, ?, ?, ?, ?)`,
+			p.SubnetID, p.RangeStart, p.RangeEnd, p.DenyUnknownClients, p.FailoverPeerName)
+		return err
+	}
+	_, err := db.conn.Exec(`UPDATE pools SET subnet_id=?, range_start=?, range_end=?, deny_unknown_clients=?, failover_peer_name=? 
+		WHERE id=?`,
+		p.SubnetID, p.RangeStart, p.RangeEnd, p.DenyUnknownClients, p.FailoverPeerName, p.ID)
+	return err
+}
+
+func (db *DB) DeletePool(id int) error {
+	_, err := db.conn.Exec("DELETE FROM pools WHERE id=?", id)
+	return err
+}
+
+// Static Leases CRUD
+func (db *DB) GetStaticLeases() ([]models.StaticLease, error) {
+	rows, err := db.conn.Query(`SELECT id, subnet_id, hostname, mac_address, ip_address, description, created_at 
+		FROM static_leases ORDER BY ip_address ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []models.StaticLease
 	for rows.Next() {
 		var l models.StaticLease
 		if err := rows.Scan(&l.ID, &l.SubnetID, &l.Hostname, &l.MACAddress, &l.IPAddress, &l.Description, &l.CreatedAt); err != nil {
 			return nil, err
 		}
-		leases = append(leases, l)
+		list = append(list, l)
 	}
-	return leases, nil
+	return list, nil
 }
 
 func (db *DB) SaveStaticLease(l models.StaticLease) error {
 	if l.ID == 0 {
-		_, err := db.conn.Exec(`INSERT INTO static_leases (subnet_id, hostname, mac_address, ip_address, description) VALUES (?, ?, ?, ?, ?)`,
+		_, err := db.conn.Exec(`INSERT INTO static_leases (subnet_id, hostname, mac_address, ip_address, description) 
+			VALUES (?, ?, ?, ?, ?)`,
 			l.SubnetID, l.Hostname, l.MACAddress, l.IPAddress, l.Description)
 		return err
 	}
-	_, err := db.conn.Exec(`UPDATE static_leases SET subnet_id=?, hostname=?, mac_address=?, ip_address=?, description=? WHERE id=?`,
+	_, err := db.conn.Exec(`UPDATE static_leases SET subnet_id=?, hostname=?, mac_address=?, ip_address=?, description=? 
+		WHERE id=?`,
 		l.SubnetID, l.Hostname, l.MACAddress, l.IPAddress, l.Description, l.ID)
 	return err
 }
 
 func (db *DB) DeleteStaticLease(id int) error {
-	_, err := db.conn.Exec(`DELETE FROM static_leases WHERE id=?`, id)
+	_, err := db.conn.Exec("DELETE FROM static_leases WHERE id=?", id)
 	return err
 }
 
 // Deployments History
 func (db *DB) RecordDeployment(d models.DeploymentHistory) error {
-	_, err := db.conn.Exec(`INSERT INTO deployment_history (deployed_by, commit_message, generated_conf_primary, generated_conf_secondary, status, log_detail)
+	_, err := db.conn.Exec(`INSERT INTO deployment_history (deployed_by, commit_message, generated_conf_primary, generated_conf_secondary, status, log_detail) 
 		VALUES (?, ?, ?, ?, ?, ?)`,
 		d.DeployedBy, d.CommitMessage, d.GeneratedConfPrimary, d.GeneratedConfSecondary, d.Status, d.LogDetail)
 	return err
 }
 
 func (db *DB) GetDeployments() ([]models.DeploymentHistory, error) {
-	rows, err := db.conn.Query(`SELECT id, deployed_by, commit_message, generated_conf_primary, generated_conf_secondary, status, log_detail, created_at FROM deployment_history ORDER BY id DESC LIMIT 20`)
+	rows, err := db.conn.Query(`SELECT id, deployed_by, commit_message, generated_conf_primary, generated_conf_secondary, status, log_detail, created_at 
+		FROM deployment_history ORDER BY id DESC LIMIT 50`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var history []models.DeploymentHistory
+	var list []models.DeploymentHistory
 	for rows.Next() {
 		var d models.DeploymentHistory
-		_ = rows.Scan(&d.ID, &d.DeployedBy, &d.CommitMessage, &d.GeneratedConfPrimary, &d.GeneratedConfSecondary, &d.Status, &d.LogDetail, &d.CreatedAt)
-		history = append(history, d)
+		if err := rows.Scan(&d.ID, &d.DeployedBy, &d.CommitMessage, &d.GeneratedConfPrimary, &d.GeneratedConfSecondary, &d.Status, &d.LogDetail, &d.CreatedAt); err != nil {
+			return nil, err
+		}
+		list = append(list, d)
 	}
-	return history, nil
+	return list, nil
 }
 
-// Validate User Login
+// User Auth
 func (db *DB) ValidateUser(username, password string) bool {
 	var count int
-	_ = db.conn.QueryRow(`SELECT COUNT(*) FROM users WHERE username=? AND password=?`, username, password).Scan(&count)
-	return count > 0
+	err := db.conn.QueryRow("SELECT COUNT(*) FROM users WHERE username=? AND password=?", username, password).Scan(&count)
+	return err == nil && count > 0
 }
