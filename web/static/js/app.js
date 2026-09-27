@@ -12,29 +12,100 @@ const tabTitles = {
     'subnets': 'DHCP Scopes & Subnet Management',
     'static': 'Static Address Reservations',
     'leases': 'Active Client Leases Explorer',
+    'clustering': 'High Availability Cluster Management',
     'deploy': 'Cluster Configuration Deployment & Audit',
     'settings': 'Global Server Options'
 };
 
+// --------------------------------------------------------------
+// Top Route Progress Bar & Full-Page Loader
+// --------------------------------------------------------------
+function startProgress() {
+    const bar = document.getElementById('route-progress-bar');
+    if (!bar) return;
+    bar.classList.remove('opacity-0');
+    bar.style.width = '35%';
+    setTimeout(() => {
+        if (bar.style.width === '35%') bar.style.width = '75%';
+    }, 120);
+}
+
+function finishProgress() {
+    const bar = document.getElementById('route-progress-bar');
+    if (!bar) return;
+    bar.style.width = '100%';
+    setTimeout(() => {
+        bar.classList.add('opacity-0');
+        setTimeout(() => {
+            bar.style.width = '0%';
+        }, 300);
+    }, 200);
+}
+
+function hidePageLoader() {
+    const loader = document.getElementById('page-loader');
+    if (loader) {
+        loader.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            loader.style.display = 'none';
+        }, 350);
+    }
+}
+
+// --------------------------------------------------------------
+// Client-side URL Routing
+// --------------------------------------------------------------
+function getRouteFromPath() {
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    if (!path || path === 'index.html' || path === 'dashboard') {
+        return 'dashboard';
+    }
+    if (['subnets', 'static', 'leases', 'clustering', 'deploy', 'settings'].includes(path)) {
+        return path;
+    }
+    return 'dashboard';
+}
+
+// Listen to browser Back / Forward buttons
+window.addEventListener('popstate', (e) => {
+    const route = (e.state && e.state.tab) ? e.state.tab : getRouteFromPath();
+    switchTab(route, false);
+});
+
 // Initialize Application
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initTheme();
-    loadDashboardSummary();
-    loadSubnets();
-    loadStaticLeases();
-    loadLeases();
-    loadGlobalSettings();
-    loadDeployHistory();
+    initSidebarState();
+
+    // Determine initial route from URL
+    const initialRoute = getRouteFromPath();
+    switchTab(initialRoute, false);
+
+    // Initial data fetch for all subsystems
+    try {
+        await Promise.allSettled([
+            loadDashboardSummary(),
+            loadClusterInfo(),
+            loadSubnets(),
+            loadStaticLeases(),
+            loadLeases(),
+            loadGlobalSettings(),
+            loadDeployHistory()
+        ]);
+    } finally {
+        hidePageLoader();
+    }
 
     // Auto-refresh real-time monitoring every 10 seconds
     setInterval(() => {
         if (currentTab === 'dashboard') loadDashboardSummary();
+        if (currentTab === 'clustering') loadClusterInfo();
         if (currentTab === 'leases') loadLeases();
     }, 10000);
 });
 
 // --------------------------------------------------------------
-// Theme Management (Light / Dark Mode with LocalStorage)
+// Theme Management (Instant Light / Dark Mode with LocalStorage)
 // --------------------------------------------------------------
 function initTheme() {
     const savedTheme = localStorage.getItem('dhcp_theme') || 'dark';
@@ -57,10 +128,87 @@ function toggleTheme() {
 }
 
 // --------------------------------------------------------------
-// Sidebar Tab Navigation
+// Sidebar Collapse & Mobile Drawer
 // --------------------------------------------------------------
-function switchTab(tab) {
+function initSidebarState() {
+    const isCollapsed = localStorage.getItem('dhcp_sidebar_collapsed') === 'true';
+    const sidebar = document.getElementById('app-sidebar');
+    const viewport = document.getElementById('main-viewport');
+    const iconLeft = document.getElementById('icon-collapse-left');
+    const iconRight = document.getElementById('icon-collapse-right');
+
+    if (isCollapsed && sidebar && viewport) {
+        sidebar.classList.add('collapsed');
+        viewport.classList.add('sidebar-collapsed');
+        if (iconLeft && iconRight) {
+            iconLeft.classList.add('hidden');
+            iconRight.classList.remove('hidden');
+        }
+    }
+}
+
+function toggleSidebarCollapse() {
+    const sidebar = document.getElementById('app-sidebar');
+    const viewport = document.getElementById('main-viewport');
+    const iconLeft = document.getElementById('icon-collapse-left');
+    const iconRight = document.getElementById('icon-collapse-right');
+
+    if (!sidebar || !viewport) return;
+
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    viewport.classList.toggle('sidebar-collapsed', isCollapsed);
+
+    if (iconLeft && iconRight) {
+        if (isCollapsed) {
+            iconLeft.classList.add('hidden');
+            iconRight.classList.remove('hidden');
+        } else {
+            iconLeft.classList.remove('hidden');
+            iconRight.classList.add('hidden');
+        }
+    }
+    localStorage.setItem('dhcp_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+}
+
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('app-sidebar');
+    const backdrop = document.getElementById('mobile-backdrop');
+    if (!sidebar || !backdrop) return;
+
+    const isClosed = sidebar.classList.contains('-translate-x-full');
+    if (isClosed) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+    } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+    }
+}
+
+// --------------------------------------------------------------
+// Sidebar Tab & Multi-page Navigation
+// --------------------------------------------------------------
+function switchTab(tab, updateHistory = true) {
+    if (!tab) tab = 'dashboard';
+    startProgress();
+
     currentTab = tab;
+
+    // Update browser URL history for multi-page behavior
+    if (updateHistory) {
+        const newPath = tab === 'dashboard' ? '/' : '/' + tab;
+        if (window.location.pathname !== newPath) {
+            window.history.pushState({ tab }, '', newPath);
+        }
+    }
+
+    // Close mobile drawer if open
+    const sidebar = document.getElementById('app-sidebar');
+    const backdrop = document.getElementById('mobile-backdrop');
+    if (sidebar && backdrop && !backdrop.classList.contains('hidden')) {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+    }
 
     // Update section visibility
     document.querySelectorAll('section[id^="tab-"]').forEach(el => el.classList.add('hidden'));
@@ -83,10 +231,25 @@ function switchTab(tab) {
         activeBtn.classList.add('text-indigo-600', 'dark:text-indigo-400', 'bg-indigo-50', 'dark:bg-indigo-950/40');
     }
 
-    if (tab === 'deploy') {
+    // Refresh context data when entering specific tabs
+    if (tab === 'dashboard') {
+        loadDashboardSummary();
+    } else if (tab === 'subnets') {
+        loadSubnets();
+    } else if (tab === 'static') {
+        loadStaticLeases();
+    } else if (tab === 'leases') {
+        loadLeases();
+    } else if (tab === 'clustering') {
+        loadClusterInfo();
+    } else if (tab === 'deploy') {
         previewConfigs();
         loadDeployHistory();
+    } else if (tab === 'settings') {
+        loadGlobalSettings();
     }
+
+    finishProgress();
 }
 
 // --------------------------------------------------------------
@@ -114,45 +277,64 @@ async function loadDashboardSummary() {
             : 'px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
         document.getElementById('primary-service-text').innerText = s.primary_service_status || 'unknown';
 
-        // Secondary Node (dhcp2)
-        document.getElementById('secondary-ip').innerText = s.secondary_node.dhcp_ip || '192.168.153.160';
-        const sActive = s.secondary_service_status === 'active';
+        // Secondary Node (dhcp2 or Standalone)
+        const sIP = s.secondary_node.dhcp_ip || '';
         const sBadge = document.getElementById('secondary-status-badge');
-        sBadge.innerText = sActive ? 'Active' : (s.secondary_node.status === 'offline' ? 'Offline' : 'Inactive');
-        sBadge.className = sActive
-            ? 'px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-            : 'px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
-        document.getElementById('secondary-service-text').innerText = s.secondary_service_status || 'unknown';
+        const isClustered = s.secondary_node.status !== 'not_configured' && sIP !== '';
+
+        if (!isClustered) {
+            document.getElementById('secondary-ip').innerText = 'Not Configured (Standalone Mode)';
+            sBadge.innerText = 'Standalone';
+            sBadge.className = 'px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20';
+            document.getElementById('secondary-service-text').innerText = 'N/A';
+        } else {
+            document.getElementById('secondary-ip').innerText = sIP;
+            const sActive = s.secondary_service_status === 'active';
+            sBadge.innerText = sActive ? 'Active' : (s.secondary_node.status === 'offline' ? 'Offline' : 'Inactive');
+            sBadge.className = sActive
+                ? 'px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                : 'px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+            document.getElementById('secondary-service-text').innerText = s.secondary_service_status || 'unknown';
+        }
 
         // Failover Peer State
-        const fState = s.failover_status.my_state || 'unknown';
-        const fPartner = s.failover_status.partner_state || 'unknown';
-        document.getElementById('failover-my-state').innerText = fState;
-        document.getElementById('failover-partner-state').innerText = fPartner;
-
         const fPill = document.getElementById('failover-state-pill');
         const sideBadge = document.getElementById('sidebar-cluster-badge');
         const pulseDot = document.getElementById('sidebar-pulse-dot');
 
-        if (fState === 'normal' && fPartner === 'normal') {
-            fPill.innerText = 'NORMAL (HEALTHY)';
-            fPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
-            sideBadge.innerText = 'NORMAL';
-            sideBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
-            pulseDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
-        } else if (fState === 'partner-down' || fPartner === 'partner-down') {
-            fPill.innerText = 'PARTNER DOWN (FAILOVER ACTIVE)';
-            fPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
-            sideBadge.innerText = 'PARTNER DOWN';
-            sideBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
-            pulseDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse';
+        if (!isClustered) {
+            document.getElementById('failover-my-state').innerText = 'standalone';
+            document.getElementById('failover-partner-state').innerText = 'none';
+            fPill.innerText = 'STANDALONE (SINGLE NODE)';
+            fPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20';
+            sideBadge.innerText = 'STANDALONE';
+            sideBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20';
+            pulseDot.className = 'w-2.5 h-2.5 rounded-full bg-blue-500';
         } else {
-            fPill.innerText = (fState + ' / ' + fPartner).toUpperCase();
-            fPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20';
-            sideBadge.innerText = fState.toUpperCase();
-            sideBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20';
-        }
+            const fState = s.failover_status.my_state || 'unknown';
+            const fPartner = s.failover_status.partner_state || 'unknown';
+            document.getElementById('failover-my-state').innerText = fState;
+            document.getElementById('failover-partner-state').innerText = fPartner;
 
+            if (fState === 'normal' && fPartner === 'normal') {
+                fPill.innerText = 'NORMAL (HEALTHY)';
+                fPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+                sideBadge.innerText = 'NORMAL';
+                sideBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+                pulseDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+            } else if (fState === 'partner-down' || fPartner === 'partner-down') {
+                fPill.innerText = 'PARTNER DOWN (FAILOVER ACTIVE)';
+                fPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
+                sideBadge.innerText = 'PARTNER DOWN';
+                sideBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
+                pulseDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse';
+            } else {
+                fPill.innerText = (fState + ' / ' + fPartner).toUpperCase();
+                fPill.className = 'px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20';
+                sideBadge.innerText = fState.toUpperCase();
+                sideBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20';
+            }
+        }
         // Statistical Counters
         document.getElementById('stat-subnets').innerText = s.total_subnets;
         document.getElementById('stat-pools').innerText = s.total_pools;
@@ -641,4 +823,225 @@ async function saveGlobalSettings() {
 async function logout() {
     await fetch('/api/logout', { method: 'POST' });
     window.location.href = '/login.html';
+}
+
+// --------------------------------------------------------------
+// 7. High Availability Clustering Management
+// --------------------------------------------------------------
+let cachedClusterInfo = null;
+
+async function loadClusterInfo() {
+    try {
+        const res = await fetch('/api/cluster');
+        const data = await res.json();
+        if (!data.success) return;
+
+        cachedClusterInfo = data.data;
+        renderClusterView(cachedClusterInfo);
+    } catch (err) {
+        console.error('Error fetching cluster info:', err);
+    }
+}
+
+function renderClusterView(info) {
+    const standaloneView = document.getElementById('view-cluster-standalone');
+    const activeView = document.getElementById('view-cluster-active');
+    const setupBtn = document.getElementById('btn-cluster-setup');
+    const actionGroup = document.getElementById('cluster-action-group');
+    const subtitle = document.getElementById('sidebar-subtitle');
+
+    if (!info.is_clustered) {
+        if (standaloneView) standaloneView.classList.remove('hidden');
+        if (activeView) activeView.classList.add('hidden');
+        if (setupBtn) setupBtn.classList.remove('hidden');
+        if (actionGroup) actionGroup.classList.add('hidden');
+        if (subtitle) subtitle.innerText = 'Standalone Mode';
+
+        const pName = info.primary_node.name || 'dhcp1';
+        const stNameEl = document.getElementById('standalone-node-name');
+        if (stNameEl) stNameEl.innerText = pName;
+    } else {
+        if (standaloneView) standaloneView.classList.add('hidden');
+        if (activeView) activeView.classList.remove('hidden');
+        if (setupBtn) setupBtn.classList.add('hidden');
+        if (actionGroup) actionGroup.classList.remove('hidden');
+        if (subtitle) subtitle.innerText = 'Failover HA Cluster';
+
+        // Fill Primary Node
+        document.getElementById('topo-primary-name').innerText = `${info.primary_node.name || 'dhcp1'} (Primary)`;
+        document.getElementById('topo-primary-mgmt').innerText = info.primary_node.management_ip || '192.168.153.159';
+        document.getElementById('topo-primary-dhcp').innerText = info.primary_node.dhcp_ip || '192.168.153.159';
+
+        // Fill Secondary Node
+        document.getElementById('topo-secondary-name').innerText = `${info.secondary_node.name || 'dhcp2'} (Secondary)`;
+        document.getElementById('topo-secondary-mgmt').innerText = info.secondary_node.management_ip || '192.168.153.160';
+        document.getElementById('topo-secondary-agent').innerText = `${info.secondary_node.agent_port || 9443}/HTTP`;
+
+        const sBadge = document.getElementById('topo-secondary-badge');
+        const sOnline = info.secondary_node.status === 'online' || info.secondary_node.status === 'active';
+        sBadge.innerText = sOnline ? 'Online' : (info.secondary_node.status || 'Offline');
+        sBadge.className = sOnline
+            ? 'px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+            : 'px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+
+        // Fill Failover State
+        const fState = info.failover_status.my_state || 'normal';
+        document.getElementById('topo-failover-state').innerHTML = `State: <span class="text-emerald-600 dark:text-emerald-400 font-bold uppercase">${fState}</span>`;
+    }
+}
+
+function openClusterModal(isEdit) {
+    const modal = document.getElementById('modal-cluster');
+    const title = document.getElementById('modal-cluster-title');
+    const testBox = document.getElementById('cluster-test-box');
+    testBox.className = 'hidden';
+    testBox.innerText = '';
+
+    if (isEdit && cachedClusterInfo && cachedClusterInfo.is_clustered) {
+        title.innerText = 'Edit Failover Cluster Configuration';
+        document.getElementById('cluster-p-name').value = cachedClusterInfo.primary_node.name || 'dhcp1';
+        document.getElementById('cluster-p-ip').value = cachedClusterInfo.primary_node.dhcp_ip || '192.168.153.159';
+        document.getElementById('cluster-s-name').value = cachedClusterInfo.secondary_node.name || 'dhcp2';
+        document.getElementById('cluster-s-ip').value = cachedClusterInfo.secondary_node.dhcp_ip || '192.168.153.160';
+        document.getElementById('cluster-s-port').value = cachedClusterInfo.secondary_node.agent_port || 9443;
+        document.getElementById('cluster-s-token').value = cachedClusterInfo.secondary_node.api_token || 'dhcp-secret-token-2026';
+    } else {
+        title.innerText = 'Setup DHCP Failover Cluster';
+        document.getElementById('cluster-p-name').value = 'dhcp1';
+        document.getElementById('cluster-p-ip').value = '192.168.153.159';
+        document.getElementById('cluster-s-name').value = 'dhcp2';
+        document.getElementById('cluster-s-ip').value = '192.168.153.160';
+        document.getElementById('cluster-s-port').value = 9443;
+        document.getElementById('cluster-s-token').value = 'dhcp-secret-token-2026';
+    }
+
+    modal.classList.remove('hidden');
+}
+
+function closeClusterModal() {
+    document.getElementById('modal-cluster').classList.add('hidden');
+}
+
+async function testModalAgentConnection() {
+    const testBox = document.getElementById('cluster-test-box');
+    const mgmtIP = document.getElementById('cluster-s-ip').value.trim();
+    const port = parseInt(document.getElementById('cluster-s-port').value) || 9443;
+    const token = document.getElementById('cluster-s-token').value.trim();
+
+    if (!mgmtIP || !token) {
+        testBox.className = 'block p-3 rounded-xl text-xs bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+        testBox.innerText = 'Please enter partner IP and API token before testing.';
+        return;
+    }
+
+    testBox.className = 'block p-3 rounded-xl text-xs bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20';
+    testBox.innerText = `Pinging agent at http://${mgmtIP}:${port}...`;
+
+    try {
+        const res = await fetch('/api/cluster/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                management_ip: mgmtIP,
+                agent_port: port,
+                api_token: token
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            testBox.className = 'block p-3 rounded-xl text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+            testBox.innerText = `✓ ${data.message}`;
+        } else {
+            testBox.className = 'block p-3 rounded-xl text-xs bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+            testBox.innerText = `✕ ${data.message}`;
+        }
+    } catch (err) {
+        testBox.className = 'block p-3 rounded-xl text-xs bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+        testBox.innerText = `✕ Network error: ${err.message}`;
+    }
+}
+
+async function testClusterConnectivity() {
+    if (!cachedClusterInfo || !cachedClusterInfo.is_clustered) return;
+    const sec = cachedClusterInfo.secondary_node;
+    try {
+        const res = await fetch('/api/cluster/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                management_ip: sec.management_ip,
+                agent_port: sec.agent_port,
+                api_token: sec.api_token
+            })
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadClusterInfo();
+        loadDashboardSummary();
+    } catch (err) {
+        alert('Test failed: ' + err.message);
+    }
+}
+
+document.getElementById('form-cluster')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        primary_node: {
+            name: document.getElementById('cluster-p-name').value.trim(),
+            role: 'primary',
+            management_ip: document.getElementById('cluster-p-ip').value.trim(),
+            dhcp_ip: document.getElementById('cluster-p-ip').value.trim(),
+            agent_port: 9443,
+            api_token: 'dhcp-secret-token-2026',
+            status: 'online'
+        },
+        secondary_node: {
+            name: document.getElementById('cluster-s-name').value.trim(),
+            role: 'secondary',
+            management_ip: document.getElementById('cluster-s-ip').value.trim(),
+            dhcp_ip: document.getElementById('cluster-s-ip').value.trim(),
+            agent_port: parseInt(document.getElementById('cluster-s-port').value) || 9443,
+            api_token: document.getElementById('cluster-s-token').value.trim(),
+            status: 'online'
+        }
+    };
+
+    try {
+        const res = await fetch('/api/cluster', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeClusterModal();
+            loadClusterInfo();
+            loadDashboardSummary();
+            alert('Cluster configured successfully! Go to Deploy to synchronize both nodes.');
+        } else {
+            alert('Failed to save cluster: ' + data.message);
+        }
+    } catch (err) {
+        alert('Error saving cluster: ' + err.message);
+    }
+});
+
+async function disbandCluster() {
+    if (!confirm('Are you sure you want to disband this failover cluster?\n\nThis will remove the secondary node and revert the system to standalone mode. Subsequent deployments will apply only to this local server.')) {
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/cluster', { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            loadClusterInfo();
+            loadDashboardSummary();
+            alert('Cluster disbanded. System reverted to standalone mode.');
+        } else {
+            alert('Failed to disband cluster: ' + data.message);
+        }
+    } catch (err) {
+        alert('Error disbanding cluster: ' + err.message);
+    }
 }
