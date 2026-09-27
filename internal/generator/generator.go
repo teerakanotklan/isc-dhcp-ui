@@ -108,9 +108,27 @@ func GenerateDHCPConfig(
 		if sn.DomainName != "" {
 			sb.WriteString(fmt.Sprintf("  option domain-name \"%s\";\n", sn.DomainName))
 		}
-		if sn.LeaseTime > 0 {
-			sb.WriteString(fmt.Sprintf("  default-lease-time %d;\n", sn.LeaseTime))
-			sb.WriteString(fmt.Sprintf("  max-lease-time %d;\n", sn.LeaseTime*2))
+		if sn.NTPServers != "" {
+			sb.WriteString(fmt.Sprintf("  option ntp-servers %s;\n", sn.NTPServers))
+		}
+		if sn.TFTPServer != "" {
+			sb.WriteString(fmt.Sprintf("  next-server %s;\n", sn.TFTPServer))
+		}
+		if sn.BootFileName != "" {
+			sb.WriteString(fmt.Sprintf("  filename \"%s\";\n", sn.BootFileName))
+		}
+
+		leaseSec := sn.LeaseTime
+		if sn.LeaseDays > 0 || sn.LeaseHours > 0 || sn.LeaseMinutes > 0 {
+			leaseSec = (sn.LeaseDays * 86400) + (sn.LeaseHours * 3600) + (sn.LeaseMinutes * 60)
+		}
+		if leaseSec > 0 {
+			sb.WriteString(fmt.Sprintf("  default-lease-time %d;\n", leaseSec))
+			sb.WriteString(fmt.Sprintf("  max-lease-time %d;\n", leaseSec*2))
+		}
+
+		if sn.CustomOptions != "" {
+			sb.WriteString(fmt.Sprintf("  # Custom Scope Options\n  %s\n", strings.ReplaceAll(sn.CustomOptions, "\n", "\n  ")))
 		}
 
 		// Pools in this Subnet
