@@ -20,10 +20,16 @@ export function AppContent() {
   const [serviceStatus, setServiceStatus] = useState(null);
   const [counts, setCounts] = useState({ subnets: 0, staticHosts: 0, activeLeases: 0 });
   const [notification, setNotification] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Apply theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
     localStorage.setItem('dhcp_theme', theme);
   }, [theme]);
 
@@ -72,8 +78,10 @@ export function AppContent() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'var(--text-secondary)' }}>Initializing ISC DHCP Management...</div>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#070a13] flex items-center justify-center">
+        <div className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">
+          Initializing ISC DHCP Management...
+        </div>
       </div>
     );
   }
@@ -83,18 +91,24 @@ export function AppContent() {
   }
 
   return (
-    <div className="app-container">
-      <Sidebar counts={counts} />
+    <div className="min-h-screen bg-slate-50 dark:bg-[#070a13] flex text-slate-900 dark:text-slate-100 transition-colors">
+      {/* Sidebar with responsive mobile drawer */}
+      <Sidebar
+        counts={counts}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+      />
 
-      <div className="main-content">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <Navbar
           serviceStatus={serviceStatus}
           onRefreshService={fetchServiceAndCounts}
           theme={theme}
           toggleTheme={toggleTheme}
+          onOpenMobileMenu={() => setMobileMenuOpen(true)}
         />
 
-        <main>
+        <main className="flex-1 pb-16">
           <Routes>
             {/* Dashboard */}
             <Route path="/" element={<Dashboard setNotification={setNotification} />} />
@@ -125,26 +139,24 @@ export function AppContent() {
       {notification && (
         <div className="toast-container">
           <div
-            className="toast"
-            style={{
-              borderColor:
-                notification.type === 'danger'
-                  ? 'var(--status-danger-border)'
-                  : 'var(--status-active-border)',
-            }}
+            className={`toast ${
+              notification.type === 'danger'
+                ? 'border-rose-500/40'
+                : 'border-emerald-500/40'
+            }`}
           >
             {notification.type === 'danger' ? (
-              <AlertTriangle size={20} color="var(--status-danger)" />
+              <AlertTriangle size={20} className="text-rose-500 shrink-0" />
             ) : (
-              <CheckCircle2 size={20} color="var(--status-active)" />
+              <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
             )}
-            <div style={{ flex: 1, fontSize: '0.88rem' }}>{notification.message}</div>
+            <div className="flex-1 text-sm font-medium">{notification.message}</div>
             <button
-              className="btn-icon"
-              style={{ padding: 2, border: 'none', background: 'transparent' }}
+              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded transition-colors"
               onClick={() => setNotification(null)}
+              aria-label="Dismiss notification"
             >
-              <X size={14} />
+              <X size={15} />
             </button>
           </div>
         </div>

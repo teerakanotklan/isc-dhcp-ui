@@ -7,8 +7,7 @@ import {
   AlertTriangle,
   History,
   RotateCcw,
-  RefreshCw,
-  Info
+  RefreshCw
 } from 'lucide-react';
 
 export function ConfigEditor({ setNotification }) {
@@ -124,38 +123,38 @@ export function ConfigEditor({ setNotification }) {
   const hasChanges = content !== originalContent;
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper space-y-6 sm:space-y-8">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-1">
             dhcpd.conf Editor
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             Direct configuration viewer, syntax dry-run verification, and snapshot backups
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
           <button
-            className={`btn ${showBackups ? 'btn-cyan' : 'btn-secondary'}`}
+            className={`btn text-xs sm:text-sm ${showBackups ? 'btn-cyan' : 'btn-secondary'}`}
             onClick={() => setShowBackups(!showBackups)}
           >
-            <History size={16} />
+            <History size={15} />
             Backups ({backups.length})
           </button>
-          <button className="btn btn-secondary" onClick={handleValidate} disabled={validating}>
-            <CheckCircle2 size={16} />
-            {validating ? 'Validating...' : 'Validate Syntax'}
+          <button className="btn btn-secondary text-xs sm:text-sm" onClick={handleValidate} disabled={validating}>
+            <CheckCircle2 size={15} />
+            {validating ? 'Validating...' : 'Validate'}
           </button>
           <button
-            className="btn btn-primary"
+            className="btn btn-primary text-xs sm:text-sm"
             onClick={handleSave}
             disabled={saving || !hasChanges}
             title={hasChanges ? 'Save changes' : 'No changes to save'}
           >
-            <Save size={16} />
-            {saving ? 'Saving...' : 'Save Configuration'}
+            <Save size={15} />
+            {saving ? 'Saving...' : 'Save Config'}
           </button>
         </div>
       </div>
@@ -163,69 +162,41 @@ export function ConfigEditor({ setNotification }) {
       {/* Validation Message Banner */}
       {validationResult && (
         <div
-          style={{
-            marginBottom: 20,
-            padding: '14px 18px',
-            borderRadius: 'var(--radius-md)',
-            background: validationResult.valid ? 'var(--status-active-bg)' : 'var(--status-danger-bg)',
-            border: `1px solid ${validationResult.valid ? 'var(--status-active-border)' : 'var(--status-danger-border)'}`,
-            color: validationResult.valid ? 'var(--status-active)' : 'var(--status-danger)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            fontSize: '0.88rem',
-          }}
+          className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${
+            validationResult.valid
+              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
+              : 'bg-rose-50 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
+          }`}
         >
-          {validationResult.valid ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+          {validationResult.valid ? <CheckCircle2 size={20} className="shrink-0" /> : <AlertTriangle size={20} className="shrink-0" />}
           <div>
             <strong>{validationResult.valid ? 'Syntax Valid' : 'Syntax Error'}:</strong> {validationResult.message}
           </div>
         </div>
       )}
 
-      {/* Layout Split if Backups Open */}
-      <div style={{ display: 'grid', gridTemplateColumns: showBackups ? '1fr 340px' : '1fr', gap: 24 }}>
+      {/* Main Grid: Editor & Backups Drawer */}
+      <div className={`grid gap-6 ${showBackups ? 'grid-cols-1 lg:grid-cols-[1fr,320px]' : 'grid-cols-1'}`}>
         {/* Editor Card */}
-        <div className="glass-card" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-          <div
-            style={{
-              padding: '12px 20px',
-              borderBottom: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--bg-tertiary)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem' }}>
-              <FileCode size={16} color="var(--accent-cyan)" />
-              <span className="font-mono">/etc/dhcp/dhcpd.conf</span>
+        <div className="glass-card p-0 overflow-hidden flex flex-col">
+          <div className="px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-black/20 text-xs">
+            <div className="flex items-center gap-2">
+              <FileCode size={16} className="text-cyan-500 shrink-0" />
+              <span className="font-mono text-slate-800 dark:text-slate-200">/etc/dhcp/dhcpd.conf</span>
               {hasChanges && (
-                <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>
+                <span className="badge badge-warning text-[10px] py-0 px-2">
                   Unsaved Changes
                 </span>
               )}
             </div>
 
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Lines: {content.split('\n').length} | Characters: {content.length}
+            <div className="text-slate-400 dark:text-slate-500 hidden sm:block">
+              Lines: {content.split('\n').length} | Chars: {content.length}
             </div>
           </div>
 
           <textarea
-            className="font-mono"
-            style={{
-              width: '100%',
-              height: '620px',
-              padding: '20px',
-              background: '#0a0e1a',
-              border: 'none',
-              outline: 'none',
-              color: '#e2e8f0',
-              fontSize: '0.9rem',
-              lineHeight: 1.6,
-              resize: 'vertical',
-            }}
+            className="w-full h-[520px] sm:h-[620px] p-4 sm:p-5 font-mono text-xs sm:text-sm bg-slate-950 text-slate-200 dark:bg-[#0a0e1a] border-0 outline-none leading-relaxed resize-y selection:bg-indigo-500 selection:text-white"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             spellCheck="false"
@@ -234,37 +205,31 @@ export function ConfigEditor({ setNotification }) {
 
         {/* Backups Drawer */}
         {showBackups && (
-          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Snapshot History</h3>
-              <button className="btn-icon" onClick={fetchBackups} title="Refresh backups">
+          <div className="glass-card space-y-4 h-fit">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-white/10">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                Snapshot History
+              </h3>
+              <button className="btn-icon p-1" onClick={fetchBackups} title="Refresh backups">
                 <RefreshCw size={14} />
               </button>
             </div>
 
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
-              Snapshots are automatically created before any modification or restore.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Snapshots are automatically created before any modification or rollback.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 520, overflowY: 'auto' }}>
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
               {backups.map((b) => (
-                <div
-                  key={b.filename}
-                  className="inner-panel"
-                  style={{
-                    padding: '12px',
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                <div key={b.filename} className="inner-panel space-y-2 p-3">
+                  <div className="font-semibold text-xs text-slate-900 dark:text-white">
                     {new Date(b.timestamp).toLocaleString()}
                   </div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.74rem', marginBottom: 8 }}>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                     {b.note || 'Manual edit snapshot'} ({b.size} bytes)
                   </div>
                   <button
-                    className="btn btn-secondary"
-                    style={{ width: '100%', fontSize: '0.75rem', padding: '5px' }}
+                    className="btn btn-secondary text-xs w-full py-1.5 justify-center"
                     onClick={() => handleRestore(b.filename)}
                   >
                     <RotateCcw size={12} />
@@ -274,7 +239,7 @@ export function ConfigEditor({ setNotification }) {
               ))}
 
               {backups.length === 0 && (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px 0', fontSize: '0.85rem' }}>
+                <div className="text-center py-8 text-xs text-slate-400">
                   No backup snapshots recorded yet
                 </div>
               )}

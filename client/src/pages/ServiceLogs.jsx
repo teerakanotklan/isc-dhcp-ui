@@ -9,7 +9,9 @@ import {
   Activity,
   AlertCircle,
   Clock,
-  Layers
+  CheckCircle2,
+  XCircle,
+  ShieldCheck
 } from 'lucide-react';
 
 export function ServiceLogs({ setNotification }) {
@@ -80,56 +82,56 @@ export function ServiceLogs({ setNotification }) {
   );
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Service Control & System Logs
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Monitor systemd daemon operations and inspect live DHCP transaction logs
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <button
-            className={`btn ${autoRefresh ? 'btn-cyan' : 'btn-secondary'}`}
+            className={`btn text-xs sm:text-sm ${autoRefresh ? 'bg-cyan-500 hover:bg-cyan-600 text-white shadow-sm shadow-cyan-500/25' : 'btn-secondary'}`}
             onClick={() => setAutoRefresh(!autoRefresh)}
           >
             <Clock size={16} />
-            {autoRefresh ? 'Auto (6s): ON' : 'Auto-Poll'}
+            {autoRefresh ? 'Auto-Poll (6s): ON' : 'Auto-Poll'}
           </button>
-          <button className="btn btn-secondary" onClick={fetchStatusAndLogs}>
-            <RefreshCw size={16} />
+          <button
+            className="btn btn-secondary text-xs sm:text-sm"
+            onClick={fetchStatusAndLogs}
+            disabled={loading}
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
         </div>
       </div>
 
       {/* Service Control Card */}
-      <div className="glass-card" style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="glass-card">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-start sm:items-center gap-4">
             <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 'var(--radius-md)',
-                background: status?.active ? 'var(--status-active-bg)' : 'var(--status-danger-bg)',
-                color: status?.active ? 'var(--status-active)' : 'var(--status-danger)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: `1px solid ${status?.active ? 'var(--status-active-border)' : 'var(--status-danger-border)'}`,
-              }}
+              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 border transition-colors ${
+                status?.active
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+              }`}
             >
-              <Activity size={28} />
+              <Activity size={26} />
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>isc-dhcp-server.service</h3>
+              <div className="flex items-center gap-2.5 flex-wrap mb-1">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono">
+                  isc-dhcp-server.service
+                </h3>
                 <span className={`badge ${status?.active ? 'badge-active' : 'badge-danger'}`}>
                   <span className="pulse-dot" />
                   {status?.active ? 'Active (Running)' : 'Inactive / Stopped'}
@@ -139,47 +141,57 @@ export function ServiceLogs({ setNotification }) {
                 )}
               </div>
 
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', gap: 16 }}>
-                {status?.pid && <span>Main PID: <strong style={{ color: 'var(--text-primary)' }}>{status.pid}</strong></span>}
-                {status?.since && <span>Uptime Since: {new Date(status.since).toLocaleString()}</span>}
+              <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 flex items-center gap-3 sm:gap-6 flex-wrap">
+                {status?.pid && (
+                  <span>
+                    Main PID: <strong className="font-mono text-slate-700 dark:text-slate-200">{status.pid}</strong>
+                  </span>
+                )}
+                {status?.since && (
+                  <span className="flex items-center gap-1.5">
+                    <Clock size={13} />
+                    Uptime Since: {new Date(status.since).toLocaleString()}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2 pt-4 lg:pt-0 border-t border-slate-200/80 dark:border-white/10 lg:border-none">
             <button
-              className="btn btn-secondary"
+              className="btn btn-secondary text-xs sm:text-sm flex-1 sm:flex-initial"
               onClick={() => handleAction('restart')}
               disabled={actionLoading}
             >
-              <RotateCw size={15} color="var(--accent-cyan)" />
-              Restart Service
+              <RotateCw size={15} className="text-cyan-500" />
+              Restart
             </button>
             <button
-              className="btn btn-secondary"
+              className="btn btn-secondary text-xs sm:text-sm flex-1 sm:flex-initial"
               onClick={() => handleAction('reload')}
               disabled={actionLoading || !status?.active}
             >
-              <RefreshCw size={15} color="var(--status-warning)" />
-              Reload Config
+              <RefreshCw size={15} className="text-amber-500" />
+              Reload
             </button>
             {status?.active ? (
               <button
-                className="btn btn-danger"
+                className="btn btn-danger text-xs sm:text-sm flex-1 sm:flex-initial"
                 onClick={() => handleAction('stop')}
                 disabled={actionLoading}
               >
                 <Power size={15} />
-                Stop Service
+                Stop
               </button>
             ) : (
               <button
-                className="btn btn-primary"
+                className="btn btn-primary text-xs sm:text-sm flex-1 sm:flex-initial"
                 onClick={() => handleAction('start')}
                 disabled={actionLoading}
               >
                 <Power size={15} />
-                Start Service
+                Start
               </button>
             )}
           </div>
@@ -187,78 +199,61 @@ export function ServiceLogs({ setNotification }) {
       </div>
 
       {/* Logs Console Container */}
-      <div className="glass-card" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
-        <div
-          style={{
-            padding: '14px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'var(--bg-tertiary)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Terminal size={18} color="var(--accent-cyan)" />
-            <span style={{ fontWeight: 600, fontSize: '0.92rem' }}>Journalctl Output Stream</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              ({filteredLogs.length} events)
+      <div className="glass-card p-0 overflow-hidden flex flex-col border border-slate-200 dark:border-white/10">
+        <div className="p-3.5 sm:px-5 border-b border-slate-200 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-100/70 dark:bg-white/[0.03]">
+          <div className="flex items-center gap-2.5">
+            <Terminal size={18} className="text-cyan-500" />
+            <span className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200">
+              Journalctl Output Stream
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
+              {filteredLogs.length} events
             </span>
           </div>
 
-          <div style={{ position: 'relative', width: 280 }}>
+          <div className="relative w-full sm:w-72">
             <input
               type="text"
-              className="input-text"
-              style={{ padding: '6px 12px 6px 32px', fontSize: '0.82rem' }}
+              className="input-text py-1.5 pl-8 pr-3 text-xs sm:text-sm w-full"
               placeholder="Filter logs (e.g. DHCPACK)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <Search
               size={14}
-              style={{
-                position: 'absolute',
-                left: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-              }}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
             />
           </div>
         </div>
 
         {/* Log Lines Area */}
-        <div
-          className="font-mono"
-          style={{
-            height: '520px',
-            overflowY: 'auto',
-            background: '#070a12',
-            padding: '16px 20px',
-            fontSize: '0.82rem',
-            lineHeight: 1.6,
-          }}
-        >
+        <div className="font-mono h-[520px] overflow-y-auto bg-slate-950 dark:bg-[#070a12] p-4 sm:p-5 text-xs sm:text-sm leading-relaxed select-text space-y-1">
           {filteredLogs.map((log, index) => {
-            let textColor = '#cbd5e1';
-            if (log.message.includes('DHCPACK')) textColor = 'var(--status-active)';
-            else if (log.message.includes('DHCPOFFER')) textColor = 'var(--accent-cyan)';
-            else if (log.message.includes('DHCPDISCOVER')) textColor = '#818cf8';
-            else if (log.message.includes('error') || log.message.includes('Failed')) textColor = 'var(--status-danger)';
+            let textColorClass = 'text-slate-300';
+            if (log.message.includes('DHCPACK')) {
+              textColorClass = 'text-emerald-400 font-medium';
+            } else if (log.message.includes('DHCPOFFER')) {
+              textColorClass = 'text-cyan-400 font-medium';
+            } else if (log.message.includes('DHCPDISCOVER')) {
+              textColorClass = 'text-indigo-400';
+            } else if (log.message.includes('DHCPREQUEST')) {
+              textColorClass = 'text-amber-300';
+            } else if (log.message.includes('error') || log.message.includes('Failed')) {
+              textColorClass = 'text-rose-400 font-semibold';
+            }
 
             return (
-              <div key={index} style={{ display: 'flex', gap: 14, padding: '2px 0' }}>
-                <span style={{ color: 'var(--text-muted)', flexShrink: 0, userSelect: 'none' }}>
+              <div key={index} className="flex items-start gap-3 hover:bg-white/[0.03] py-0.5 px-1 rounded transition-colors">
+                <span className="text-slate-500 flex-shrink-0 text-xs select-none">
                   {log.timestamp}
                 </span>
-                <span style={{ color: textColor }}>{log.message}</span>
+                <span className={textColorClass}>{log.message}</span>
               </div>
             );
           })}
 
           {filteredLogs.length === 0 && (
-            <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>
+            <div className="text-slate-500 text-center py-16">
               No log messages matching filter
             </div>
           )}

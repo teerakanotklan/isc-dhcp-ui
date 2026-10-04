@@ -6,9 +6,6 @@ import {
   RefreshCw,
   Download,
   Clock,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
   RotateCcw
 } from 'lucide-react';
 
@@ -41,7 +38,6 @@ export function Leases({ setNotification }) {
     fetchLeases();
   }, [statusFilter]);
 
-  // Handle auto-refresh
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(fetchLeases, 10000);
@@ -108,86 +104,77 @@ export function Leases({ setNotification }) {
   };
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper space-y-6 sm:space-y-8">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-1">
             DHCP IP Leases
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             Live records of active IP assignments granted to network client devices
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <button
-            className={`btn ${autoRefresh ? 'btn-cyan' : 'btn-secondary'}`}
+            className={`btn text-xs sm:text-sm ${autoRefresh ? 'btn-cyan' : 'btn-secondary'}`}
             onClick={() => setAutoRefresh(!autoRefresh)}
             title="Auto refresh every 10 seconds"
           >
-            <Clock size={16} />
+            <Clock size={15} />
             {autoRefresh ? 'Auto (10s): ON' : 'Auto-Refresh'}
           </button>
-          <button className="btn btn-secondary" onClick={exportCSV}>
-            <Download size={16} />
+          <button className="btn btn-secondary text-xs sm:text-sm" onClick={exportCSV}>
+            <Download size={15} />
             Export CSV
           </button>
-          <button className="btn btn-secondary" onClick={fetchLeases}>
-            <RefreshCw size={16} />
+          <button className="btn btn-secondary text-xs sm:text-sm" onClick={fetchLeases}>
+            <RefreshCw size={15} />
             Refresh
           </button>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="glass-card" style={{ marginBottom: 24, padding: '16px 20px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          {/* Status Tabs */}
-          <div className="segmented-tabs">
-            {['all', 'active', 'free', 'expired'].map((st) => (
-              <button
-                key={st}
-                onClick={() => setStatusFilter(st)}
-                className={`segmented-tab-btn ${statusFilter === st ? 'active' : ''}`}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
-
-          {/* Search Form */}
-          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 8, flex: 1, maxWidth: 380 }}>
-            <div style={{ position: 'relative', width: '100%' }}>
-              <input
-                type="text"
-                className="input-text"
-                style={{ paddingLeft: 38 }}
-                placeholder="Search IP, MAC, hostname..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <Search
-                size={17}
-                style={{
-                  position: 'absolute',
-                  left: 13,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
-              />
-            </div>
-            <button type="submit" className="btn btn-secondary">
-              Search
+      <div className="glass-card flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 sm:p-5">
+        {/* Status Tabs */}
+        <div className="segmented-tabs overflow-x-auto self-start md:self-auto">
+          {['all', 'active', 'free', 'expired'].map((st) => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`segmented-tab-btn ${statusFilter === st ? 'active' : ''}`}
+            >
+              {st}
             </button>
-          </form>
+          ))}
         </div>
+
+        {/* Search Form */}
+        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 max-w-md w-full">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              className="input-text pl-10 text-xs sm:text-sm"
+              placeholder="Search IP, MAC, hostname..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Search
+              size={17}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+            />
+          </div>
+          <button type="submit" className="btn btn-secondary text-xs sm:text-sm shrink-0">
+            Search
+          </button>
+        </form>
       </div>
 
       {/* Leases Table */}
-      <div className="glass-card" style={{ padding: 0 }}>
-        <div className="table-container" style={{ border: 'none' }}>
+      <div className="glass-card p-0 overflow-hidden">
+        <div className="table-container border-0">
           <table className="data-table">
             <thead>
               <tr>
@@ -197,33 +184,29 @@ export function Leases({ setNotification }) {
                 <th>Status</th>
                 <th>Valid Until (UTC)</th>
                 <th>Time Left</th>
-                <th style={{ textAlign: 'right' }}>Action</th>
+                <th className="text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {leases.map((l) => (
                 <tr key={l.ip}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Wifi size={16} color="var(--accent-cyan)" />
-                      <span className="font-mono" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div className="flex items-center gap-2.5">
+                      <Wifi size={15} className="text-cyan-500 shrink-0" />
+                      <span className="font-mono font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
                         {l.ip}
                       </span>
                     </div>
                   </td>
 
                   <td>
-                    <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="font-mono text-slate-600 dark:text-slate-400 text-xs sm:text-sm">
                       {l.mac || 'N/A'}
                     </span>
                   </td>
 
-                  <td>
-                    {l.hostname ? (
-                      <span style={{ fontWeight: 600 }}>{l.hostname}</span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)' }}>—</span>
-                    )}
+                  <td className="font-medium text-slate-800 dark:text-slate-200">
+                    {l.hostname ? l.hostname : <span className="text-slate-400 italic font-normal">—</span>}
                   </td>
 
                   <td>
@@ -237,35 +220,34 @@ export function Leases({ setNotification }) {
                       }`}
                     >
                       {l.status === 'active' && <span className="pulse-dot" />}
-                      <span style={{ textTransform: 'capitalize' }}>{l.status}</span>
+                      <span className="capitalize">{l.status}</span>
                     </span>
                   </td>
 
-                  <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  <td className="text-xs text-slate-500 dark:text-slate-400">
                     {l.ends ? new Date(l.ends).toLocaleString() : 'N/A'}
                   </td>
 
                   <td>
                     {l.status === 'active' ? (
                       <span
-                        style={{
-                          fontSize: '0.82rem',
-                          fontWeight: 600,
-                          color: l.remainingSeconds < 3600 ? 'var(--status-warning)' : 'var(--text-secondary)',
-                        }}
+                        className={`text-xs font-semibold ${
+                          l.remainingSeconds < 3600
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-slate-600 dark:text-slate-300'
+                        }`}
                       >
                         {formatRemainingTime(l.remainingSeconds)}
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>—</span>
+                      <span className="text-xs text-slate-400">—</span>
                     )}
                   </td>
 
-                  <td style={{ textAlign: 'right' }}>
+                  <td className="text-right">
                     {l.status === 'active' && (
                       <button
-                        className="btn btn-secondary"
-                        style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                        className="btn btn-secondary text-xs py-1 px-2.5"
                         onClick={() => handleRelease(l.ip)}
                         title="Release this lease and mark as free"
                       >
@@ -279,7 +261,7 @@ export function Leases({ setNotification }) {
 
               {leases.length === 0 && (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '36px' }}>
+                  <td colSpan="7" className="text-center py-12 text-slate-500 dark:text-slate-400">
                     No lease records matching the current criteria
                   </td>
                 </tr>

@@ -1,61 +1,79 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Moon, Sun, Server, LogOut, RefreshCw } from 'lucide-react';
+import { Moon, Sun, Server, LogOut, RefreshCw, Menu } from 'lucide-react';
 
-export function Navbar({ serviceStatus, onRefreshService, theme, toggleTheme }) {
+export function Navbar({ serviceStatus, onRefreshService, theme, toggleTheme, onOpenMobileMenu }) {
   const { user, logout } = useAuth();
 
   return (
-    <header className="navbar">
-      <div className="navbar-left">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Server size={20} color="var(--accent-cyan)" />
-          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>isc-dhcp-server</span>
+    <header className="sticky top-0 z-30 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-colors">
+      {/* Left side: Hamburger button + Service status */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        {/* Mobile Hamburger toggle */}
+        <button
+          className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
+          onClick={onOpenMobileMenu}
+          aria-label="Open navigation menu"
+        >
+          <Menu size={20} />
+        </button>
+
+        <div className="hidden sm:flex items-center gap-2.5">
+          <Server size={18} className="text-cyan-500" />
+          <span className="font-semibold text-sm tracking-tight text-slate-800 dark:text-slate-200">
+            isc-dhcp-server
+          </span>
         </div>
 
         {serviceStatus && (
           <div
-            className={`badge ${serviceStatus.active ? 'badge-active' : 'badge-danger'}`}
-            style={{ cursor: 'pointer' }}
+            className={`badge cursor-pointer ${serviceStatus.active ? 'badge-active' : 'badge-danger'}`}
             onClick={onRefreshService}
             title="Click to refresh service status"
           >
             <span className="pulse-dot" />
-            <span>{serviceStatus.active ? 'Active (Running)' : 'Stopped / Error'}</span>
+            <span className="text-xs">{serviceStatus.active ? 'Active' : 'Stopped'}</span>
             {serviceStatus.pid && (
-              <span style={{ opacity: 0.7, fontSize: '0.7rem' }}>PID: {serviceStatus.pid}</span>
+              <span className="hidden md:inline opacity-70 text-[11px]">PID: {serviceStatus.pid}</span>
             )}
-            <RefreshCw size={12} style={{ marginLeft: 4 }} />
+            <RefreshCw size={11} className="ml-1 opacity-70 hover:opacity-100 transition-opacity" />
           </div>
         )}
 
         {serviceStatus?.isMock && (
-          <span className="badge badge-info" title="Running in simulated mock mode for Windows/Dev">
+          <span className="badge badge-info hidden sm:inline-flex" title="Running in simulated mock mode for Windows/Dev">
             Mock Mode
           </span>
         )}
       </div>
 
-      <div className="navbar-right">
+      {/* Right side: Theme Switcher & Admin User Info */}
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Theme Toggle */}
         <button
           className="btn-icon"
           onClick={toggleTheme}
           title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
         >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          {theme === 'dark' ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-slate-600" />}
         </button>
 
         {/* User Info & Logout */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '8px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{user?.name || user?.username}</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--status-active)', fontWeight: 600, letterSpacing: '0.04em' }}>
+        <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-slate-200 dark:border-white/10">
+          <div className="hidden sm:flex flex-col text-right">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+              {user?.name || user?.username}
+            </span>
+            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tracking-wider">
               ADMINISTRATOR
-            </div>
+            </span>
           </div>
-          <button className="btn-icon" onClick={logout} title="Sign Out">
-            <LogOut size={16} color="var(--status-danger)" />
+          <button
+            className="btn-icon text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+            onClick={logout}
+            title="Sign Out"
+          >
+            <LogOut size={16} />
           </button>
         </div>
       </div>

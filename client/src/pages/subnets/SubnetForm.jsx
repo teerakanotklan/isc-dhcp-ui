@@ -9,9 +9,7 @@ import {
   Trash2,
   Sliders,
   Globe,
-  HardDrive,
-  Info,
-  CheckCircle2
+  SlidersHorizontal
 } from 'lucide-react';
 
 const PREDEFINED_DHCP_OPTIONS = [
@@ -34,7 +32,7 @@ const PREDEFINED_DHCP_OPTIONS = [
 ];
 
 export function SubnetForm({ setNotification }) {
-  const { id } = useParams(); // Subnet network IP if editing (e.g. 192.168.1.0)
+  const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const { apiFetch } = useAuth();
@@ -57,7 +55,6 @@ export function SubnetForm({ setNotification }) {
 
   const [customOptions, setCustomOptions] = useState([]);
 
-  // Fetch subnet details if in edit mode
   useEffect(() => {
     if (!isEdit) return;
 
@@ -109,7 +106,6 @@ export function SubnetForm({ setNotification }) {
     fetchSubnetData();
   }, [id, isEdit]);
 
-  // Option Handlers
   const handleAddOption = () => {
     setCustomOptions([
       ...customOptions,
@@ -189,40 +185,46 @@ export function SubnetForm({ setNotification }) {
 
   if (loading) {
     return (
-      <div className="page-wrapper" style={{ textAlign: 'center', padding: '100px 0' }}>
-        <div style={{ color: 'var(--text-secondary)' }}>Loading Subnet Details...</div>
+      <div className="page-wrapper text-center py-24">
+        <div className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">
+          Loading Subnet Details...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="page-wrapper" style={{ maxWidth: 980 }}>
+    <div className="page-wrapper max-w-4xl space-y-6">
       {/* Breadcrumbs & Navigation Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-          <Link to="/subnets" style={{ color: 'var(--accent-cyan)', textDecoration: 'none' }}>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <Link to="/subnets" className="text-cyan-600 dark:text-cyan-400 hover:underline">
             Subnet Management
           </Link>
           <span>/</span>
           {isEdit ? (
-            <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{id}</span>
+            <span className="font-mono text-slate-800 dark:text-slate-200">{id}</span>
           ) : (
             <span>New Subnet</span>
           )}
           <span>/</span>
-          <span style={{ color: 'var(--text-secondary)' }}>{isEdit ? 'Edit Configuration' : 'Create'}</span>
+          <span>{isEdit ? 'Edit Configuration' : 'Create'}</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <button className="btn-icon" onClick={() => navigate('/subnets')} title="Back to Subnets">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <button
+              className="btn-icon mt-1 sm:mt-0"
+              onClick={() => navigate('/subnets')}
+              title="Back to Subnets"
+            >
               <ArrowLeft size={18} />
             </button>
             <div>
-              <h1 style={{ fontSize: '1.65rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 2 }}>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                 {isEdit ? `Edit Subnet ${id}` : 'Create New Subnet'}
               </h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+              <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
                 {isEdit
                   ? 'Modify address pool range, routing options, and specialized DHCP parameters'
                   : 'Define a new network segment and configure dynamic IP address allocation'}
@@ -230,10 +232,10 @@ export function SubnetForm({ setNotification }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-secondary text-xs sm:text-sm"
               onClick={() => navigate('/subnets')}
               disabled={saving}
             >
@@ -241,7 +243,7 @@ export function SubnetForm({ setNotification }) {
             </button>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary text-xs sm:text-sm"
               onClick={handleSubmit}
               disabled={saving}
             >
@@ -253,16 +255,18 @@ export function SubnetForm({ setNotification }) {
       </div>
 
       {/* Main Form */}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section 1: Network & Address Pool */}
-        <div className="glass-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 12 }}>
-            <Network size={20} color="var(--accent-primary)" />
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>1. Network Identification & IP Range</h2>
+        <div className="glass-card space-y-4">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/80 dark:border-white/10">
+            <Network size={20} className="text-indigo-500" />
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              1. Network Identification & IP Range
+            </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-            <div className="form-group">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="form-group mb-0">
               <label className="form-label">Subnet Network IP *</label>
               <input
                 type="text"
@@ -273,12 +277,12 @@ export function SubnetForm({ setNotification }) {
                 disabled={isEdit}
                 required
               />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Base network address of the subnet (e.g. 192.168.1.0 or 10.0.0.0)
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                Base network address of the subnet (e.g. 192.168.1.0)
               </span>
             </div>
 
-            <div className="form-group">
+            <div className="form-group mb-0">
               <label className="form-label">Subnet Mask *</label>
               <input
                 type="text"
@@ -288,12 +292,12 @@ export function SubnetForm({ setNotification }) {
                 onChange={(e) => setFormData({ ...formData, netmask: e.target.value })}
                 required
               />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                 Subnet mask in dotted decimal format (e.g. 255.255.255.0)
               </span>
             </div>
 
-            <div className="form-group">
+            <div className="form-group mb-0">
               <label className="form-label">Dynamic Pool Range Start IP</label>
               <input
                 type="text"
@@ -304,7 +308,7 @@ export function SubnetForm({ setNotification }) {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group mb-0">
               <label className="form-label">Dynamic Pool Range End IP</label>
               <input
                 type="text"
@@ -318,14 +322,16 @@ export function SubnetForm({ setNotification }) {
         </div>
 
         {/* Section 2: Gateways, DNS & Lease Timers */}
-        <div className="glass-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 12 }}>
-            <Globe size={20} color="var(--accent-cyan)" />
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>2. Gateway, DNS & Lease Parameters</h2>
+        <div className="glass-card space-y-4">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/80 dark:border-white/10">
+            <Globe size={20} className="text-cyan-500" />
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              2. Gateway, DNS & Lease Parameters
+            </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-            <div className="form-group">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="form-group mb-0">
               <label className="form-label">Default Gateway (option routers)</label>
               <input
                 type="text"
@@ -336,8 +342,8 @@ export function SubnetForm({ setNotification }) {
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Broadcast Address (option broadcast-address)</label>
+            <div className="form-group mb-0">
+              <label className="form-label">Broadcast Address</label>
               <input
                 type="text"
                 className="input-text font-mono"
@@ -347,7 +353,7 @@ export function SubnetForm({ setNotification }) {
               />
             </div>
 
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <div className="form-group mb-0 sm:col-span-2">
               <label className="form-label">DNS Name Servers (comma separated)</label>
               <input
                 type="text"
@@ -356,13 +362,13 @@ export function SubnetForm({ setNotification }) {
                 value={formData.domainNameServers}
                 onChange={(e) => setFormData({ ...formData, domainNameServers: e.target.value })}
               />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                DNS IPs pushed to client devices (e.g. 1.1.1.1, 8.8.8.8)
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                DNS server IPs pushed to client devices
               </span>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Domain Name (option domain-name)</label>
+            <div className="form-group mb-0">
+              <label className="form-label">Domain Name</label>
               <input
                 type="text"
                 className="input-text"
@@ -372,11 +378,11 @@ export function SubnetForm({ setNotification }) {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group mb-0">
               <label className="form-label">Default Lease Time (seconds)</label>
               <input
                 type="number"
-                className="input-text"
+                className="input-text font-mono"
                 placeholder="86400"
                 value={formData.defaultLeaseTime}
                 onChange={(e) => setFormData({ ...formData, defaultLeaseTime: e.target.value })}
@@ -386,70 +392,56 @@ export function SubnetForm({ setNotification }) {
         </div>
 
         {/* Section 3: Additional DHCP Options */}
-        <div className="glass-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Sliders size={20} color="var(--accent-cyan)" />
+        <div className="glass-card space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-white/10">
+            <div className="flex items-center gap-2.5">
+              <Sliders size={20} className="text-cyan-500" />
               <div>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>3. Additional DHCP Options</h2>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Configure advanced options like NTP time sync, PXE network boot, WINS, or custom vendor tags
-                </span>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  3. Additional DHCP Options
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Configure advanced options like NTP, PXE boot, WINS, or custom vendor parameters
+                </p>
               </div>
             </div>
 
             <button
               type="button"
-              className="btn btn-secondary"
-              style={{ fontSize: '0.82rem', padding: '6px 14px' }}
+              className="btn btn-secondary text-xs self-start sm:self-auto"
               onClick={handleAddOption}
             >
-              <Plus size={15} /> Add DHCP Option
+              <Plus size={14} /> Add DHCP Option
             </button>
           </div>
 
           {customOptions.length === 0 ? (
-            <div
-              className="inner-panel"
-              style={{
-                textAlign: 'center',
-                padding: '36px 20px',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--text-muted)',
-                fontSize: '0.88rem',
-              }}
-            >
-              <Sliders size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
-              <div>No additional DHCP options specified for this subnet.</div>
-              <div style={{ fontSize: '0.8rem', marginTop: 4 }}>
+            <div className="inner-panel text-center py-10 text-slate-500 dark:text-slate-400 space-y-2">
+              <SlidersHorizontal size={28} className="mx-auto opacity-40 text-slate-400" />
+              <div className="text-xs sm:text-sm">No additional DHCP options specified for this subnet.</div>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 Click <strong>+ Add DHCP Option</strong> to configure NTP, PXE boot, MTU, WPAD, or custom parameters.
-              </div>
+              </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="space-y-3">
               {customOptions.map((opt, idx) => (
                 <div
                   key={idx}
-                  className="inner-panel"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 14,
-                    padding: '14px',
-                  }}
+                  className="inner-panel flex flex-col sm:flex-row items-stretch sm:items-start gap-3 p-3.5"
                 >
                   {/* Select Option */}
-                  <div style={{ flex: 1.2, minWidth: 200 }}>
-                    <label style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                  <div className="flex-1 min-w-[200px] space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block">
                       Option Identifier
                     </label>
                     <select
-                      className="select-input font-mono"
+                      className="select-input font-mono text-xs sm:text-sm py-2"
                       value={opt.type}
                       onChange={(e) => handleOptionTypeChange(idx, e.target.value)}
                     >
                       {PREDEFINED_DHCP_OPTIONS.map((p) => (
-                        <option key={p.value} value={p.value}>
+                        <option key={p.value} value={p.value} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                           {p.label}
                         </option>
                       ))}
@@ -458,8 +450,7 @@ export function SubnetForm({ setNotification }) {
                     {opt.type === 'custom' && (
                       <input
                         type="text"
-                        className="input-text font-mono"
-                        style={{ marginTop: 8, fontSize: '0.82rem' }}
+                        className="input-text font-mono text-xs sm:text-sm py-1.5 mt-2"
                         placeholder="Enter custom option name..."
                         value={opt.customName}
                         onChange={(e) => handleOptionFieldChange(idx, 'customName', e.target.value)}
@@ -469,13 +460,13 @@ export function SubnetForm({ setNotification }) {
                   </div>
 
                   {/* Value Input */}
-                  <div style={{ flex: 2, minWidth: 220 }}>
-                    <label style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                  <div className="flex-[2] min-w-[220px] space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block">
                       Option Value / Parameter
                     </label>
                     <input
                       type="text"
-                      className="input-text font-mono"
+                      className="input-text font-mono text-xs sm:text-sm py-2"
                       placeholder={`Example: ${getOptionExample(opt.type)}`}
                       value={opt.value}
                       onChange={(e) => handleOptionFieldChange(idx, 'value', e.target.value)}
@@ -484,26 +475,27 @@ export function SubnetForm({ setNotification }) {
                   </div>
 
                   {/* Delete Button */}
-                  <button
-                    type="button"
-                    className="btn-icon"
-                    style={{ marginTop: 22, color: 'var(--status-danger)', padding: 9 }}
-                    onClick={() => handleRemoveOption(idx)}
-                    title="Remove Option"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex sm:flex-col justify-end pt-1 sm:pt-6">
+                    <button
+                      type="button"
+                      className="btn-icon text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 p-2"
+                      onClick={() => handleRemoveOption(idx)}
+                      title="Remove Option"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Bottom Action Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingBottom: 40 }}>
+        {/* Bottom Actions */}
+        <div className="flex justify-end gap-3 pt-2">
           <button
             type="button"
-            className="btn btn-secondary"
+            className="btn btn-secondary text-sm"
             onClick={() => navigate('/subnets')}
             disabled={saving}
           >
@@ -511,9 +503,8 @@ export function SubnetForm({ setNotification }) {
           </button>
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-primary text-sm px-6"
             disabled={saving}
-            style={{ padding: '10px 24px' }}
           >
             <Save size={16} />
             {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Subnet'}

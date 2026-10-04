@@ -23,105 +23,37 @@ export function Login() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-50 dark:bg-[#070a13] transition-colors">
       {/* Background glowing orbs */}
-      <div
-        style={{
-          position: 'absolute',
-          width: 500,
-          height: 500,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%)',
-          top: '15%',
-          left: '20%',
-          filter: 'blur(50px)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          width: 450,
-          height: 450,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, transparent 70%)',
-          bottom: '15%',
-          right: '20%',
-          filter: 'blur(50px)',
-          pointerEvents: 'none',
-        }}
-      />
+      <div className="absolute w-[500px] h-[500px] rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 blur-[100px] -top-20 -left-20 pointer-events-none" />
+      <div className="absolute w-[450px] h-[450px] rounded-full bg-cyan-500/10 dark:bg-cyan-500/20 blur-[100px] -bottom-20 -right-20 pointer-events-none" />
 
-      <div
-        className="glass-card"
-        style={{
-          maxWidth: 440,
-          width: '100%',
-          padding: '40px 32px',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          zIndex: 1,
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--gradient-brand)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              boxShadow: 'var(--shadow-glow)',
-              marginBottom: 16,
-            }}
-          >
+      <div className="glass-card max-w-md w-full p-6 sm:p-10 shadow-xl relative z-10">
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-500 inline-flex items-center justify-center text-white shadow-glow-indigo mb-4">
             <Server size={28} />
           </div>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6 }}>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-1.5">
             ISC DHCP Server
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             Sign in to access Web Management Console
           </p>
         </div>
 
         {error && (
-          <div
-            style={{
-              background: 'var(--status-danger-bg)',
-              color: 'var(--status-danger)',
-              border: '1px solid var(--status-danger-border)',
-              padding: '12px 16px',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.85rem',
-              marginBottom: 20,
-            }}
-          >
+          <div className="mb-5 p-3 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400 text-sm font-medium">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="form-group">
             <label className="form-label">Username</label>
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <input
                 type="text"
-                className="input-text"
-                style={{ paddingLeft: 40 }}
+                className="input-text pl-10"
                 placeholder="admin"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -129,24 +61,17 @@ export function Login() {
               />
               <User
                 size={18}
-                style={{
-                  position: 'absolute',
-                  left: 14,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
               />
             </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: 24 }}>
+          <div className="form-group">
             <label className="form-label">Password</label>
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <input
                 type="password"
-                className="input-text"
-                style={{ paddingLeft: 40 }}
+                className="input-text pl-10"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -154,43 +79,25 @@ export function Login() {
               />
               <Lock
                 size={18}
-                style={{
-                  position: 'absolute',
-                  left: 14,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-muted)',
-                }}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', padding: '12px', fontSize: '0.95rem' }}
+            className="btn btn-primary w-full py-3 text-sm font-semibold mt-2"
             disabled={loading}
           >
             {loading ? 'Authenticating...' : 'Sign In as Administrator'}
-            <ArrowRight size={18} />
+            <ArrowRight size={17} />
           </button>
         </form>
 
-        <div
-          className="inner-panel"
-          style={{
-            marginTop: 28,
-            padding: '14px',
-            fontSize: '0.8rem',
-            color: 'var(--text-secondary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-          }}
-        >
-          <ShieldCheck size={20} color="var(--accent-cyan)" />
+        <div className="mt-7 inner-panel flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
+          <ShieldCheck size={20} className="text-cyan-500 shrink-0" />
           <div>
-            Default Admin: <strong style={{ color: 'var(--text-primary)' }}>admin</strong> / <strong style={{ color: 'var(--text-primary)' }}>admin123</strong>
+            Default Admin: <strong className="text-slate-900 dark:text-white">admin</strong> / <strong className="text-slate-900 dark:text-white">admin123</strong>
           </div>
         </div>
       </div>

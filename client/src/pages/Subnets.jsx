@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Plus,
@@ -13,7 +13,6 @@ import {
 
 export function Subnets({ setNotification }) {
   const { apiFetch } = useAuth();
-  const navigate = useNavigate();
   const [subnets, setSubnets] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,24 +53,24 @@ export function Subnets({ setNotification }) {
   };
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper space-y-6 sm:space-y-8">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-1">
             Subnet Management
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             Configure network subnets, IP allocation pools, gateways, and DNS resolvers
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-secondary" onClick={fetchSubnets}>
-            <RefreshCw size={16} />
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button className="btn btn-secondary text-xs sm:text-sm" onClick={fetchSubnets}>
+            <RefreshCw size={15} />
             Refresh
           </button>
-          <Link to="/subnets/add" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+          <Link to="/subnets/add" className="btn btn-primary text-xs sm:text-sm">
             <Plus size={16} />
             Add Subnet
           </Link>
@@ -79,117 +78,106 @@ export function Subnets({ setNotification }) {
       </div>
 
       {/* Subnet Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 24 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {subnets.map((sub) => (
-          <div key={sub.subnet} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 'var(--radius-md)',
-                    background: 'rgba(99, 102, 241, 0.15)',
-                    color: 'var(--accent-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Network size={22} />
+          <div key={sub.subnet} className="glass-card flex flex-col justify-between space-y-4">
+            <div>
+              {/* Card Title & Actions */}
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                    <Network size={22} />
+                  </div>
+                  <div>
+                    <h3 className="font-mono text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                      {sub.subnet}
+                    </h3>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Netmask: {sub.netmask}
+                    </span>
+                  </div>
                 </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Link
+                    to={`/subnets/${encodeURIComponent(sub.subnet)}/edit`}
+                    className="btn-icon"
+                    title="Edit Subnet"
+                  >
+                    <Edit2 size={14} />
+                  </Link>
+                  <button
+                    className="btn-icon text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                    onClick={() => handleDelete(sub.subnet)}
+                    title="Delete Subnet"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Parameters list */}
+              <div className="inner-panel grid grid-cols-2 gap-3 text-xs mb-3">
                 <div>
-                  <h3 className="font-mono" style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                    {sub.subnet}
-                  </h3>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Netmask: {sub.netmask}</span>
+                  <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block mb-0.5">
+                    IP POOL RANGE
+                  </span>
+                  <span className="font-mono text-cyan-600 dark:text-cyan-400 font-semibold truncate block">
+                    {sub.rangeStart && sub.rangeEnd ? `${sub.rangeStart} - ${sub.rangeEnd}` : 'No dynamic range'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block mb-0.5">
+                    DEFAULT GATEWAY
+                  </span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200 truncate block">
+                    {sub.routers || 'None'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block mb-0.5">
+                    DNS SERVERS
+                  </span>
+                  <span className="font-mono text-slate-800 dark:text-slate-200 truncate block">
+                    {sub.domainNameServers || 'None'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block mb-0.5">
+                    DEFAULT LEASE
+                  </span>
+                  <span className="text-slate-800 dark:text-slate-200">
+                    {sub.defaultLeaseTime ? `${sub.defaultLeaseTime}s` : 'Global'}
+                  </span>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 6 }}>
-                <Link
-                  to={`/subnets/${encodeURIComponent(sub.subnet)}/edit`}
-                  className="btn-icon"
-                  title="Edit Subnet"
-                  style={{ textDecoration: 'none' }}
-                >
-                  <Edit2 size={15} />
-                </Link>
-                <button
-                  className="btn-icon"
-                  style={{ color: 'var(--status-danger)' }}
-                  onClick={() => handleDelete(sub.subnet)}
-                  title="Delete Subnet"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
+              {sub.domainName && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 mb-2">
+                  <Globe size={13} className="text-cyan-500" />
+                  <span>Domain: <strong className="text-slate-800 dark:text-slate-200">{sub.domainName}</strong></span>
+                </div>
+              )}
             </div>
-
-            {/* Parameters list */}
-            <div
-              className="inner-panel"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 12,
-                padding: '14px',
-                fontSize: '0.83rem',
-              }}
-            >
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>IP POOL RANGE</span>
-                <span className="font-mono" style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>
-                  {sub.rangeStart && sub.rangeEnd ? `${sub.rangeStart} - ${sub.rangeEnd}` : 'No dynamic range'}
-                </span>
-              </div>
-
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>DEFAULT GATEWAY</span>
-                <span className="font-mono">{sub.routers || 'None'}</span>
-              </div>
-
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>DNS SERVERS</span>
-                <span className="font-mono">{sub.domainNameServers || 'None'}</span>
-              </div>
-
-              <div>
-                <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem' }}>DEFAULT LEASE</span>
-                <span>{sub.defaultLeaseTime ? `${sub.defaultLeaseTime}s` : 'Global'}</span>
-              </div>
-            </div>
-
-            {sub.domainName && (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Globe size={14} color="var(--accent-cyan)" />
-                <span>Domain: <strong>{sub.domainName}</strong></span>
-              </div>
-            )}
 
             {/* Additional DHCP Options Badges */}
             {Array.isArray(sub.customOptions) && sub.customOptions.length > 0 && (
-              <div style={{ paddingTop: '4px', borderTop: '1px dashed var(--border-subtle)' }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Sliders size={12} color="var(--accent-cyan)" />
+              <div className="pt-3 border-t border-slate-200/80 dark:border-white/10 space-y-2">
+                <div className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center gap-1.5 uppercase tracking-wider">
+                  <Sliders size={12} className="text-cyan-500" />
                   <span>ADDITIONAL DHCP OPTIONS ({sub.customOptions.length})</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div className="flex flex-wrap gap-1.5">
                   {sub.customOptions.map((opt, idx) => (
                     <span
                       key={idx}
-                      className="font-mono"
-                      style={{
-                        fontSize: '0.74rem',
-                        padding: '3px 8px',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(99, 102, 241, 0.12)',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                        color: 'var(--text-primary)',
-                      }}
+                      className="font-mono text-[11px] px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30 text-slate-800 dark:text-slate-200 truncate max-w-full"
                       title={`${opt.name}: ${opt.value}`}
                     >
-                      <strong style={{ color: 'var(--accent-cyan)' }}>{opt.name}</strong>: {opt.value}
+                      <strong className="text-cyan-600 dark:text-cyan-400">{opt.name}</strong>: {opt.value}
                     </span>
                   ))}
                 </div>
@@ -199,16 +187,13 @@ export function Subnets({ setNotification }) {
         ))}
 
         {subnets.length === 0 && !loading && (
-          <div
-            className="glass-card"
-            style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}
-          >
-            <Network size={40} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-            <h3>No Subnets Configured</h3>
-            <p style={{ fontSize: '0.88rem', marginTop: 4, marginBottom: 16 }}>
-              Add a subnet to begin leasing dynamic IP addresses
-            </p>
-            <Link to="/subnets/add" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+          <div className="glass-card col-span-full text-center py-16 text-slate-500 dark:text-slate-400 space-y-4">
+            <Network size={44} className="mx-auto text-slate-400 opacity-60" />
+            <div>
+              <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">No Subnets Configured</h3>
+              <p className="text-sm mt-1">Add a subnet to begin leasing dynamic IP addresses</p>
+            </div>
+            <Link to="/subnets/add" className="btn btn-primary text-sm inline-flex">
               <Plus size={16} /> Add First Subnet
             </Link>
           </div>

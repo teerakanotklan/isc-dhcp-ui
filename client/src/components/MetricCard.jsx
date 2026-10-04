@@ -3,73 +3,55 @@ import React from 'react';
 export function MetricCard({ title, value, subtext, icon: Icon, color = 'indigo', progress = null }) {
   const colorMap = {
     indigo: {
-      bg: 'rgba(99, 102, 241, 0.15)',
-      text: '#6366f1',
-      bar: 'linear-gradient(90deg, #6366f1, #818cf8)'
+      bg: 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400',
+      bar: 'bg-gradient-to-r from-indigo-500 to-indigo-400'
     },
     cyan: {
-      bg: 'rgba(6, 182, 212, 0.15)',
-      text: '#06b6d4',
-      bar: 'linear-gradient(90deg, #06b6d4, #38bdf8)'
+      bg: 'bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400',
+      bar: 'bg-gradient-to-r from-cyan-500 to-sky-400'
     },
     emerald: {
-      bg: 'rgba(16, 185, 129, 0.15)',
-      text: '#10b981',
-      bar: 'linear-gradient(90deg, #10b981, #34d399)'
+      bg: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+      bar: 'bg-gradient-to-r from-emerald-500 to-emerald-400'
     },
     amber: {
-      bg: 'rgba(245, 158, 11, 0.15)',
-      text: '#f59e0b',
-      bar: 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+      bg: 'bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400',
+      bar: 'bg-gradient-to-r from-amber-500 to-amber-400'
     }
   };
 
   const scheme = colorMap[color] || colorMap.indigo;
 
   return (
-    <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+    <div className="glass-card flex flex-col justify-between">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
           {title}
         </span>
         {Icon && (
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 'var(--radius-sm)',
-              background: scheme.bg,
-              color: scheme.text,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${scheme.bg}`}>
             <Icon size={18} />
           </div>
         )}
       </div>
 
-      <div style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1 }}>
+      <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">
         {value}
       </div>
 
       {progress !== null && (
-        <div style={{ marginTop: '2px' }}>
+        <div className="mt-1 mb-2">
           <div className="progress-bar-bg">
             <div
-              className="progress-bar-fill"
-              style={{
-                width: `${Math.min(100, Math.max(0, progress))}%`,
-                background: scheme.bar,
-              }}
+              className={`progress-bar-fill ${scheme.bar}`}
+              style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
             />
           </div>
         </div>
       )}
 
       {subtext && (
-        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+        <div className="text-xs text-slate-500 dark:text-slate-400 mt-auto">
           {subtext}
         </div>
       )}

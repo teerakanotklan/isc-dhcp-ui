@@ -63,24 +63,24 @@ export function StaticIP({ setNotification }) {
   });
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper space-y-6 sm:space-y-8">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-1">
             Static IP Reservations
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             Bind MAC physical addresses to dedicated fixed IP allocations
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-secondary" onClick={fetchHosts}>
-            <RefreshCw size={16} />
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button className="btn btn-secondary text-xs sm:text-sm" onClick={fetchHosts}>
+            <RefreshCw size={15} />
             Refresh
           </button>
-          <Link to="/static-hosts/add" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+          <Link to="/static-hosts/add" className="btn btn-primary text-xs sm:text-sm">
             <Plus size={16} />
             Add Static Host
           </Link>
@@ -88,38 +88,30 @@ export function StaticIP({ setNotification }) {
       </div>
 
       {/* Search & Stats Bar */}
-      <div className="glass-card" style={{ marginBottom: 24, padding: '16px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
-            <input
-              type="text"
-              className="input-text"
-              style={{ paddingLeft: 38 }}
-              placeholder="Search by Hostname, MAC, or IP address..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <Search
-              size={17}
-              style={{
-                position: 'absolute',
-                left: 13,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-              }}
-            />
-          </div>
+      <div className="glass-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5">
+        <div className="relative flex-1 max-w-md w-full">
+          <input
+            type="text"
+            className="input-text pl-10 text-xs sm:text-sm"
+            placeholder="Search by Hostname, MAC, or IP address..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Search
+            size={17}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+          />
+        </div>
 
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Showing <strong>{filteredHosts.length}</strong> of <strong>{hosts.length}</strong> reservations
-          </div>
+        <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          Showing <strong className="text-slate-900 dark:text-white">{filteredHosts.length}</strong> of{' '}
+          <strong className="text-slate-900 dark:text-white">{hosts.length}</strong> reservations
         </div>
       </div>
 
       {/* Table */}
-      <div className="glass-card" style={{ padding: 0 }}>
-        <div className="table-container" style={{ border: 'none' }}>
+      <div className="glass-card p-0 overflow-hidden">
+        <div className="table-container border-0">
           <table className="data-table">
             <thead>
               <tr>
@@ -127,81 +119,74 @@ export function StaticIP({ setNotification }) {
                 <th>MAC Address</th>
                 <th>Fixed IP Address</th>
                 <th>Description / Purpose</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredHosts.map((h) => (
                 <tr key={h.name}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'rgba(99, 102, 241, 0.12)',
-                          color: 'var(--accent-primary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                         <BookmarkCheck size={16} />
                       </div>
-                      <span style={{ fontWeight: 600 }}>{h.name}</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">{h.name}</span>
                     </div>
                   </td>
 
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-slate-600 dark:text-slate-400 text-xs sm:text-sm">
                         {h.mac}
                       </span>
                       <button
-                        className="btn-icon"
-                        style={{ padding: 4 }}
+                        className="btn-icon p-1"
                         onClick={() => handleCopy(h.mac, `mac-${h.name}`)}
                         title="Copy MAC"
                       >
-                        {copiedKey === `mac-${h.name}` ? <Check size={12} color="var(--status-active)" /> : <Copy size={12} />}
+                        {copiedKey === `mac-${h.name}` ? (
+                          <Check size={13} className="text-emerald-500" />
+                        ) : (
+                          <Copy size={13} />
+                        )}
                       </button>
                     </div>
                   </td>
 
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className="font-mono" style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400 text-xs sm:text-sm">
                         {h.ip}
                       </span>
                       <button
-                        className="btn-icon"
-                        style={{ padding: 4 }}
+                        className="btn-icon p-1"
                         onClick={() => handleCopy(h.ip, `ip-${h.name}`)}
                         title="Copy IP"
                       >
-                        {copiedKey === `ip-${h.name}` ? <Check size={12} color="var(--status-active)" /> : <Copy size={12} />}
+                        {copiedKey === `ip-${h.name}` ? (
+                          <Check size={13} className="text-emerald-500" />
+                        ) : (
+                          <Copy size={13} />
+                        )}
                       </button>
                     </div>
                   </td>
 
-                  <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                    {h.description || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                  <td className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate">
+                    {h.description || <span className="opacity-40">—</span>}
                   </td>
 
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: 6 }}>
+                  <td className="text-right">
+                    <div className="inline-flex items-center gap-1.5">
                       <Link
                         to={`/static-hosts/${encodeURIComponent(h.name)}/edit`}
                         className="btn-icon"
                         title="Edit Host"
-                        style={{ textDecoration: 'none' }}
                       >
                         <Edit2 size={14} />
                       </Link>
                       <button
-                        className="btn-icon"
-                        style={{ color: 'var(--status-danger)' }}
+                        className="btn-icon text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
                         onClick={() => handleDelete(h.name)}
                         title="Delete Host"
                       >
@@ -214,7 +199,7 @@ export function StaticIP({ setNotification }) {
 
               {filteredHosts.length === 0 && (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '36px' }}>
+                  <td colSpan="5" className="text-center py-12 text-slate-500 dark:text-slate-400">
                     No static host reservations match your query
                   </td>
                 </tr>
