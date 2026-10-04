@@ -1,151 +1,122 @@
 # ISC DHCP Server Web Management UI
 
-ระบบบริหารจัดการ **ISC DHCP Server (`isc-dhcp-server`)** ผ่าน Web Application สไตล์ Modern Glassmorphism พัฒนาด้วย **Node.js (Express API) + React (Vite)** พร้อม Vanilla CSS Design System
+ระบบบริหารจัดการ **ISC DHCP Server** ผ่าน Web Application สไตล์ Modern Glassmorphism พัฒนาด้วย **Node.js (Express API) + React (Vite)** พร้อมสถาปัตยกรรม Single-Port ให้บริการไฟล์ Production Bundle ได้ทันที
+
+รองรับการควบคุมและจัดการ DHCP Server บน **Linux Server** โดยตรงผ่านคำสั่งมาตรฐาน `systemctl`, `journalctl`, และไวยากรณ์ `dhcpd`
 
 ---
 
 ## 🌟 จุดเด่นและฟังก์ชันการทำงาน
 
-- 📊 **Dashboard ภาพรวม**:
-  - แสดงสถานะการทำงานของ DHCP daemon (`active`, `PID`, `uptime`)
-  - สรุปจำนวน Subnets, Static Hosts, Active Leases และ Total Pool Capacity
-  - กราฟและแถบแสดงอัตราการใช้งาน Address Pool (%) ในแต่ละ Subnet แบบ Real-time
+- 📊 **Dashboard ภาพรวม Real-time**:
+  - แสดงสถานะการทำงานจริงของ DHCP daemon (`active`, `PID`, `uptime`) ผ่าน `systemctl`
+  - สรุปจำนวน Subnets, Static Hosts, Active Leases และ Pool Capacity
+  - กราฟและแถบแสดงอัตราการใช้งาน Address Pool (%) ในแต่ละ Subnet
   - ควบคุม Service ได้ทันที (Restart, Reload, Stop, Start)
-- 🔐 **Authentication & Security (Admin Only)**:
-  - ระบบตรวจสอบสิทธิ์ด้วย JWT Token
-  - รองรับเฉพาะผู้ดูแลระบบระดับ **Admin** เท่านั้น
+- 🔐 **Authentication & Security (Admin Role)**:
+  - ระบบตรวจสอบสิทธิ์ด้วย JWT Token (HMAC-SHA256)
   - บัญชีเริ่มต้น: `admin` / รหัสผ่าน: `admin123`
-- 🌐 **Subnet Management**:
-  - จัดการ Network, Netmask, Dynamic Pool Range (`start` - `end`)
-  - ตั้งค่า Default Gateway (option routers), DNS Servers, Domain Name และ Lease Time
+- 🌐 **Subnet & Scope Management**:
+  - จัดการ Network, Netmask, Dynamic Pool Range (`range start end`)
+  - กำหนด Default Gateway (`routers`), DNS Servers, Domain Name, และ Custom DHCP Options (เช่น NTP, PXE bootfile-name, MTU)
 - 📌 **Static IP (Host Reservations)**:
   - จัดการผูก MAC Address กับ IP Address ถาวร (`hardware ethernet` & `fixed-address`)
-  - ตรวจสอบรูปแบบ MAC Address (`XX:XX:XX:XX:XX:XX`) และป้องกันการจอง IP ชนกัน
-  - ปุ่ม 1-Click Copy MAC/IP
+  - ตรวจสอบรูปแบบ MAC Address และป้องกันการจอง IP ชนกัน
 - 📡 **Lease IP Viewer**:
-  - อ่านและประมวลผล `/var/lib/dhcp/dhcpd.leases` แบบ Real-time
-  - กรองสถานะ Active / Free / Expired
-  - ค้นหาด้วย IP, MAC หรือ Client Hostname
-  - คำนวณเวลานับถอยหลังหมดอายุของแต่ละ Lease
+  - อ่านและประมวลผลไฟล์ Leases จริงของระบบ (`dhcpd.leases`)
+  - ค้นหาและกรองสถานะ Active / Free / Expired
   - ส่งออกข้อมูลเป็นไฟล์ CSV
-  - รองรับการ Release / ปลดปล่อย IP ที่แจกออกไป
-- 📝 **dhcpd.conf Editor & Safety**:
-  - หน้าแก้ไขไฟล์คอนฟิกโดยตรง
-  - ระบบ **Test Syntax** ตรวจสอบไวยากรณ์ก่อนบันทึก
-  - **Auto-Backup & Snapshot History**: สำรองข้อมูลอัตโนมัติทุกครั้งก่อนบันทึก และสามารถ Rollback ย้อนกลับได้ด้วยคลิกเดียว
-- 🖥️ **Service Control & Logs**:
-  - ดู Systemd Journal logs ของ DHCP server แบบสด
-  - ตัวกรองข้อความ Log เช่น `DHCPACK`, `DHCPOFFER`, `DHCPDISCOVER`
-- 💻 **Dual-Environment Support**:
-  - **Linux Host**: ทำงานกับไฟล์ระบบจริง `/etc/dhcp/dhcpd.conf` และคำสั่ง `systemctl`
-  - **Windows / Dev**: เข้าสู่ **Mock Mode** อัตโนมัติ พร้อมข้อมูลจำลองเสมือนจริงสำหรับพัฒนาและทดสอบได้ทันที
+- 📝 **Configuration & Safety**:
+  - จัดการ Listen Network Interfaces (`INTERFACESv4` / `INTERFACESv6`)
+  - ตรวจสอบความถูกต้องของไฟล์ไวยากรณ์ด้วย `dhcpd -t`
+  - ระบบ Auto-Backup สำรองไฟล์ `/etc/dhcp/dhcpd.conf` อัตโนมัติทุกครั้งก่อนบันทึก
+- 📜 **Service Logs**:
+  - ดึงข้อมูลบันทึกสดผ่าน `journalctl -u <service>` พร้อมระบบกรองข้อความและ Auto-poll
 
 ---
 
-## 🚀 วิธีการติดตั้งและรันใช้งาน
+## 🐧 การติดตั้งอัตโนมัติบน Linux Server (Automated Installer)
 
-### 1. ทดสอบรันบนเครื่อง Local / Windows (Mock Mode)
+โปรเจกต์มีสคริปต์ `install.sh` สำหรับติดตั้งแบบอัตโนมัติครบวงจร โดยจะตรวจสอบ OS, ติดตั้งแพ็กเกจที่เกี่ยวข้อง, สร้าง Dedicated User (`dhcpui`), กำหนดสิทธิ์ Sudoers, Build Frontend และเปิดใช้งาน Systemd Service ให้อัตโนมัติ
+
+### ระบบปฏิบัติการที่รองรับ:
+- **Debian Family**: Debian 10 / 11 / 12, Ubuntu 20.04 / 22.04 / 24.04 LTS (แพ็กเกจ `isc-dhcp-server`)
+- **Enterprise Linux (RHEL Family)**: Rocky Linux 8 / 9, AlmaLinux 8 / 9, RHEL 8 / 9, CentOS Stream, Fedora (แพ็กเกจ `dhcp-server`)
+
+### ขั้นตอนการติดตั้ง:
 
 ```bash
-# 1. ติดตั้ง Dependencies ทั้งหมด (Root, Server, Client)
-npm run install:all
-
-# 2. รันโหมด Development (เปิดทั้ง API และ Frontend พร้อมกัน)
-npm run dev
-```
-
-- เข้าใช้งานหน้าเว็บได้ที่: **`http://localhost:3000`**
-- Backend API รันอยู่ที่: **`http://localhost:5000`**
-- เข้าสู่ระบบด้วย:
-  - **Username**: `admin`
-  - **Password**: `admin123`
-
----
-
-### 2. นำไปติดตั้งบน Linux Server (Production Setup)
-
-#### ขั้นตอนที่ 1: ติดตั้ง Node.js (v18+) และ ISC DHCP Server
-```bash
-sudo apt update
-sudo apt install -y isc-dhcp-server nodejs npm git
-```
-
-#### ขั้นตอนที่ 2: Clone และติดตั้งโปรเจกต์
-```bash
-sudo git clone <your-repo-url> /opt/isc-dhcp-ui
+# 1. Clone โปรเจกต์ไปยังเซิร์ฟเวอร์
+git clone <repository-url> /opt/isc-dhcp-ui
 cd /opt/isc-dhcp-ui
-sudo npm run install:all
-sudo npm run build
+
+# 2. รันสคริปต์ติดตั้งด้วยสิทธิ์ root
+sudo bash install.sh
 ```
 
-#### ขั้นตอนที่ 3: ตั้งค่าสิทธิ์ Sudoers ให้กับ Service Control
-เพื่อให้ Node.js สามารถสั่ง restart หรือ reload `isc-dhcp-server` ได้โดยไม่ต้องใช้รหัสผ่าน root:
+### สคริปต์ `install.sh` จะดำเนินการสิ่งต่อไปนี้ให้อัตโนมัติ:
+1. ตรวจจับ Linux Distribution และเลือกใช้ Package Manager (`apt` หรือ `dnf`/`yum`)
+2. ติดตั้งแพ็กเกจระบบที่จำเป็น: `isc-dhcp-server` (หรือ `dhcp-server`), `git`, `curl`, `net-tools`
+3. ติดตั้ง Node.js 20 LTS จาก NodeSource หากระบบยังไม่มี
+4. สร้าง System User เฉพาะ `dhcpui` เพื่อความปลอดภัยในการทำงาน
+5. ตั้งค่าสิทธิ์ `/etc/sudoers.d/isc-dhcp-ui` เพื่อให้ `dhcpui` สั่งการเฉพาะคำสั่ง lifecycle ของ DHCP service
+6. สำรองไฟล์ `/etc/dhcp/dhcpd.conf` และสร้างเทมเพลตเริ่มต้นหากไฟล์ยังไม่มี
+7. ติดตั้ง Node dependencies และคอมไพล์ Frontend Production Bundle (`npm run build`)
+8. สร้างและเปิดใช้งาน Systemd Unit: `isc-dhcp-ui.service` ที่พอร์ต `3000`
+
+---
+
+## 🌐 การเข้าใช้งานระบบ
+
+เมื่อติดตั้งสำเร็จ สามารถเปิดเว็บบราวเซอร์และเข้าไปที่:
+- **URL**: `http://<IP-ของเซิร์ฟเวอร์>:3000` (หรือ `http://localhost:3000`)
+- **Username**: `admin`
+- **Password**: `admin123`
+
+---
+
+## 🔧 คำสั่งจัดการ Service บน Linux
+
 ```bash
-sudo visudo -f /etc/sudoers.d/dhcp-webui
+# ตรวจสอบสถานะ Web UI
+sudo systemctl status isc-dhcp-ui
+
+# Restart Web UI
+sudo systemctl restart isc-dhcp-ui
+
+# ตรวจสอบสถานะ DHCP Server Daemon
+# สำหรับ Ubuntu / Debian:
+sudo systemctl status isc-dhcp-server
+# สำหรับ RHEL / Rocky Linux:
+sudo systemctl status dhcpd
+
+# ตรวจสอบ Logs
+sudo journalctl -u isc-dhcp-ui -f
 ```
-ใส่บรรทัดนี้ลงไป (แทนที่ `<user>` ด้วย user ที่รัน node เช่น `www-data` หรือ user ของคุณ):
-```sudoers
-<user> ALL=(ALL) NOPASSWD: /bin/systemctl restart isc-dhcp-server, /bin/systemctl reload isc-dhcp-server, /bin/systemctl status isc-dhcp-server, /bin/systemctl stop isc-dhcp-server, /bin/systemctl start isc-dhcp-server, /usr/sbin/dhcpd -t *
-```
-
-และกำหนดสิทธิ์ให้ user สามารถอ่าน/เขียน `/etc/dhcp/dhcpd.conf` และอ่าน `/var/lib/dhcp/dhcpd.leases`:
-```bash
-sudo chown -R root:<user> /etc/dhcp
-sudo chmod -R 775 /etc/dhcp
-```
-
-#### ขั้นตอนที่ 4: ตั้งค่ารันเป็น Systemd Service
-สร้างไฟล์ `/etc/systemd/system/isc-dhcp-ui.service`:
-```ini
-[Unit]
-Description=ISC DHCP Server Web UI Management
-After=network.target isc-dhcp-server.service
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/isc-dhcp-ui
-Environment=NODE_ENV=production
-Environment=PORT=5000
-Environment=DHCP_MODE=real
-ExecStart=/usr/bin/node server/index.js
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-เปิดใช้งาน Service:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now isc-dhcp-ui
-```
-
-เข้าถึงหน้าเว็บได้ผ่าน: **`http://<server-ip>:5000`**
 
 ---
 
 ## 🛠️ โครงสร้างโปรเจกต์
 
 ```
-d:/code/isc-dhcp-ui/
-├── package.json              # Monorepo coordination
-├── server/                   # Express Backend
-│   ├── config/default.js     # ตรวจจับ Real/Mock mode และพาธไฟล์
-│   ├── middleware/auth.js    # JWT & Admin role verification
+isc-dhcp-ui/
+├── install.sh                # สคริปต์ติดตั้งอัตโนมัติบน Linux Server
+├── package.json              # Monorepo scripts
+├── server/                   # Express Backend Service
+│   ├── config/default.js     # ตรวจจับระบบปฏิบัติการ (Debian vs RHEL) และกำหนดพาธไฟล์ระบบ
+│   ├── index.js              # Server entry point & Production Static Asset Serving
+│   ├── middleware/auth.js    # JWT Authentication & Authorization
 │   ├── services/
 │   │   ├── dhcpConfigService.js  # ตัวแยกวิเคราะห์และสร้าง dhcpd.conf
 │   │   ├── dhcpLeaseService.js   # ตัวอ่านและวิเคราะห์ dhcpd.leases
-│   │   ├── systemService.js      # จัดการคำสั่ง systemctl & journalctl
-│   │   ├── authService.js        # ตรวจสอบรหัสผ่าน & สร้าง Token
+│   │   ├── systemService.js      # จัดการคำสั่ง systemctl & journalctl ของระบบจริง
+│   │   ├── authService.js        # ตรวจสอบรหัสผ่าน & จัดการบัญชี Admin
 │   │   └── backupService.js      # จัดการประวัติ Snapshot & Rollback
-│   ├── routes/               # REST API Endpoints
-│   └── mock/                 # Mock Data จำลอง
+│   └── routes/               # REST API Endpoints
 └── client/                   # React (Vite) Frontend
     ├── src/
-    │   ├── index.css         # Modern Vanilla CSS (Glassmorphism & Variables)
+    │   ├── index.css         # Modern Vanilla CSS (Glassmorphism Design System)
     │   ├── context/          # Auth Context
-    │   ├── components/       # Navbar, Sidebar, MetricCard, Modal
-    │   └── pages/            # Dashboard, Subnets, StaticIP, Leases, Config, Service
+    │   ├── components/       # Navbar, Sidebar, MetricCard, ConfirmModal
+    │   └── pages/            # Dashboard, Scopes, Static Hosts, Leases, Settings, ServiceLogs
 ```

@@ -15,9 +15,9 @@ console.log('✔ Auth Test: Admin authentication successful, token generated.');
 
 // 2. Config Parser Test
 const parsed = dhcpConfigService.parseConfig();
-console.log(`✔ Config Parser: Found ${parsed.subnets.length} subnets, ${parsed.hosts.length} static hosts.`);
-if (parsed.subnets.length === 0 || parsed.hosts.length === 0) {
-  console.error('FAIL: Config parser did not parse subnets or hosts');
+console.log(`✔ Config Parser: Successfully parsed configuration (${parsed.subnets.length} subnets, ${parsed.hosts.length} static hosts).`);
+if (!Array.isArray(parsed.subnets) || !Array.isArray(parsed.hosts)) {
+  console.error('FAIL: Config parser did not return subnets or hosts array');
   process.exit(1);
 }
 
@@ -29,6 +29,6 @@ console.log(`✔ Active Leases: ${activeLeases.length} active leases found.`);
 
 // 4. Service Status
 const status = systemService.getServiceStatus();
-console.log(`✔ System Service: Service status is "${status.status}", mode: ${status.mode}.`);
+console.log(`✔ System Service: Service status is "${status.status}", service: ${status.service}.`);
 
 console.log('\nAll backend component tests passed cleanly with 100% success!');
