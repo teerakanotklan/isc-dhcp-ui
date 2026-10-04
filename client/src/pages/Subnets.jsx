@@ -128,14 +128,12 @@ export function Subnets({ setNotification }) {
 
             {/* Parameters list */}
             <div
+              className="inner-panel"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 gap: 12,
                 padding: '14px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(0, 0, 0, 0.2)',
-                border: '1px solid var(--border-subtle)',
                 fontSize: '0.83rem',
               }}
             >

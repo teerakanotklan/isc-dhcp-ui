@@ -177,12 +177,10 @@ export function Login() {
         </form>
 
         <div
+          className="inner-panel"
           style={{
             marginTop: 28,
             padding: '14px',
-            borderRadius: 'var(--radius-sm)',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--border-subtle)',
             fontSize: '0.8rem',
             color: 'var(--text-secondary)',
             display: 'flex',

@@ -50,6 +50,25 @@
   --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.25);
 
+  /* Theme-specific Panel, Tab & Component Colors */
+  --bg-panel: rgba(0, 0, 0, 0.25);
+  --bg-panel-border: rgba(255, 255, 255, 0.07);
+  --bg-tabs: rgba(0, 0, 0, 0.35);
+  --tab-inactive-text: #94a3b8;
+  --tab-inactive-hover: #f8fafc;
+  --btn-secondary-bg: rgba(255, 255, 255, 0.06);
+  --btn-secondary-border: rgba(255, 255, 255, 0.1);
+  --btn-secondary-hover: rgba(255, 255, 255, 0.12);
+  --btn-icon-bg: rgba(255, 255, 255, 0.05);
+  --btn-icon-border: rgba(255, 255, 255, 0.08);
+  --btn-icon-hover: rgba(255, 255, 255, 0.12);
+  --nav-hover: rgba(255, 255, 255, 0.04);
+  --progress-bg: rgba(255, 255, 255, 0.08);
+  --table-th-bg: rgba(255, 255, 255, 0.02);
+  --table-hover-bg: rgba(255, 255, 255, 0.03);
+  --service-card-bg: linear-gradient(135deg, rgba(30, 41, 69, 0.7) 0%, rgba(15, 23, 42, 0.7) 100%);
+  --service-card-border: rgba(99, 102, 241, 0.25);
+
   /* Layout */
   --sidebar-width: 260px;
   --header-height: 68px;
@@ -62,24 +81,42 @@
 
 /* Light Theme Variables */
 [data-theme='light'] {
-  --bg-primary: #f1f5f9;
+  --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #e2e8f0;
-  --bg-card: rgba(255, 255, 255, 0.85);
-  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #ffffff;
   --bg-input: #ffffff;
   --bg-modal: #ffffff;
-  --border-subtle: rgba(148, 163, 184, 0.25);
+  --border-subtle: #e2e8f0;
   --border-active: rgba(99, 102, 241, 0.7);
   --border-focus: rgba(6, 182, 212, 0.8);
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-muted: #64748b;
   --text-inverse: #f8fafc;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 20px 35px -10px rgba(0, 0, 0, 0.12);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 18px rgba(99, 102, 241, 0.18);
+
+  --bg-panel: #f8fafc;
+  --bg-panel-border: #e2e8f0;
+  --bg-tabs: #e2e8f0;
+  --tab-inactive-text: #475569;
+  --tab-inactive-hover: #0f172a;
+  --btn-secondary-bg: #f8fafc;
+  --btn-secondary-border: #cbd5e1;
+  --btn-secondary-hover: #f1f5f9;
+  --btn-icon-bg: #f8fafc;
+  --btn-icon-border: #cbd5e1;
+  --btn-icon-hover: #f1f5f9;
+  --nav-hover: #f1f5f9;
+  --progress-bg: #e2e8f0;
+  --table-th-bg: #f8fafc;
+  --table-hover-bg: #f8fafc;
+  --service-card-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  --service-card-border: #cbd5e1;
 }
 
 /* Base Styles */
@@ -233,7 +270,7 @@ code, pre, .font-mono {
 
 .nav-item:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--nav-hover);
 }
 
 .nav-item.active {
@@ -392,13 +429,13 @@ code, pre, .font-mono {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--btn-secondary-bg);
   color: var(--text-primary);
-  border-color: var(--border-subtle);
+  border-color: var(--btn-secondary-border);
 }
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--btn-secondary-hover);
+  border-color: var(--border-active);
 }
 
 .btn-danger {
@@ -414,8 +451,8 @@ code, pre, .font-mono {
 .btn-icon {
   padding: 8px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-subtle);
+  background: var(--btn-icon-bg);
+  border: 1px solid var(--btn-icon-border);
   color: var(--text-secondary);
   cursor: pointer;
   transition: var(--transition);
@@ -425,8 +462,8 @@ code, pre, .font-mono {
 }
 .btn-icon:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--btn-icon-hover);
+  border-color: var(--border-active);
 }
 
 /* Badges */
@@ -526,7 +563,7 @@ code, pre, .font-mono {
 }
 
 .data-table th {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--table-th-bg);
   color: var(--text-muted);
   font-weight: 600;
   padding: 14px 18px;
@@ -547,7 +584,7 @@ code, pre, .font-mono {
 }
 
 .data-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--table-hover-bg);
 }
 
 /* Modal Overlay & Card */
@@ -642,7 +679,7 @@ code, pre, .font-mono {
 .progress-bar-bg {
   width: 100%;
   height: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--progress-bg);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -651,6 +688,52 @@ code, pre, .font-mono {
   height: 100%;
   border-radius: var(--radius-full);
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Segmented Control Filter Tabs */
+.segmented-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-tabs);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.segmented-tab-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: transparent;
+  color: var(--tab-inactive-text);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.segmented-tab-btn:hover {
+  color: var(--tab-inactive-hover);
+}
+
+.segmented-tab-btn.active {
+  background: var(--accent-primary);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.35);
+}
+
+/* Inner Panel Box */
+.inner-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--bg-panel-border);
+  border-radius: var(--radius-sm);
+}
+
+/* Service status banner */
+.service-status-card {
+  background: var(--service-card-bg);
+  border: 1px solid var(--service-card-border);
 }
 
 /* Responsive */

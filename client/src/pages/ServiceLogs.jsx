@@ -195,7 +195,7 @@ export function ServiceLogs({ setNotification }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(0, 0, 0, 0.25)',
+            background: 'var(--bg-tertiary)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

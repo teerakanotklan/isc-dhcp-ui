@@ -100,7 +100,7 @@ export function Dashboard({ setNotification }) {
 
       {/* Service Status & Quick Control Card */}
       <div
-        className="glass-card"
+        className="glass-card service-status-card"
         style={{
           marginBottom: 28,
           display: 'flex',
@@ -108,8 +108,6 @@ export function Dashboard({ setNotification }) {
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 20,
-          background: 'linear-gradient(135deg, rgba(30, 41, 69, 0.7) 0%, rgba(15, 23, 42, 0.7) 100%)',
-          border: '1px solid rgba(99, 102, 241, 0.25)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

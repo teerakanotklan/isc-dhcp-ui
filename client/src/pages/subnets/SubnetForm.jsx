@@ -410,10 +410,10 @@ export function SubnetForm({ setNotification }) {
 
           {customOptions.length === 0 ? (
             <div
+              className="inner-panel"
               style={{
                 textAlign: 'center',
                 padding: '36px 20px',
-                background: 'rgba(0, 0, 0, 0.15)',
                 borderRadius: 'var(--radius-md)',
                 color: 'var(--text-muted)',
                 fontSize: '0.88rem',
@@ -430,14 +430,12 @@ export function SubnetForm({ setNotification }) {
               {customOptions.map((opt, idx) => (
                 <div
                   key={idx}
+                  className="inner-panel"
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 14,
                     padding: '14px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid var(--border-subtle)',
                   }}
                 >
                   {/* Select Option */}
@@ -451,7 +449,7 @@ export function SubnetForm({ setNotification }) {
                       onChange={(e) => handleOptionTypeChange(idx, e.target.value)}
                     >
                       {PREDEFINED_DHCP_OPTIONS.map((p) => (
-                        <option key={p.value} value={p.value} style={{ background: '#0f172a', color: '#fff' }}>
+                        <option key={p.value} value={p.value}>
                           {p.label}
                         </option>
                       ))}

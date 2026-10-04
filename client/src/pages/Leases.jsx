@@ -144,23 +144,12 @@ export function Leases({ setNotification }) {
       <div className="glass-card" style={{ marginBottom: 24, padding: '16px 20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           {/* Status Tabs */}
-          <div style={{ display: 'flex', gap: 8, background: 'rgba(0, 0, 0, 0.25)', padding: 4, borderRadius: 'var(--radius-sm)' }}>
+          <div className="segmented-tabs">
             {['all', 'active', 'free', 'expired'].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  textTransform: 'capitalize',
-                  background: statusFilter === st ? 'var(--accent-primary)' : 'transparent',
-                  color: statusFilter === st ? 'white' : 'var(--text-secondary)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'var(--transition)',
-                }}
+                className={`segmented-tab-btn ${statusFilter === st ? 'active' : ''}`}
               >
                 {st}
               </button>

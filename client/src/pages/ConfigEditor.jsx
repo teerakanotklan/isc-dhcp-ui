@@ -194,7 +194,7 @@ export function ConfigEditor({ setNotification }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: 'rgba(0, 0, 0, 0.2)',
+              background: 'var(--bg-tertiary)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem' }}>
@@ -218,7 +218,7 @@ export function ConfigEditor({ setNotification }) {
               width: '100%',
               height: '620px',
               padding: '20px',
-              background: 'rgba(10, 14, 26, 0.85)',
+              background: '#0a0e1a',
               border: 'none',
               outline: 'none',
               color: '#e2e8f0',
@@ -250,11 +250,9 @@ export function ConfigEditor({ setNotification }) {
               {backups.map((b) => (
                 <div
                   key={b.filename}
+                  className="inner-panel"
                   style={{
                     padding: '12px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid var(--border-subtle)',
                     fontSize: '0.8rem',
                   }}
                 >
