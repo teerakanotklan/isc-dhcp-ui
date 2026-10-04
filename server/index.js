@@ -21,6 +21,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/subnets', subnetRoutes);
+app.use('/api/scopes', subnetRoutes);
 app.use('/api/static-hosts', staticHostRoutes);
 app.use('/api/leases', leaseRoutes);
 app.use('/api/config', configRoutes);

@@ -8,14 +8,16 @@ function getBreadcrumbs(pathname) {
     return [{ label: 'Dashboard', to: '/' }];
   }
 
-  if (pathname.startsWith('/subnets')) {
-    const crumbs = [{ label: 'Subnets', to: '/subnets' }];
-    if (pathname === '/subnets/add') {
-      crumbs.push({ label: 'Add New Subnet' });
+  if (pathname.startsWith('/scopes') || pathname.startsWith('/subnets')) {
+    const isScopeUrl = pathname.startsWith('/scopes');
+    const baseTo = isScopeUrl ? '/scopes' : '/subnets';
+    const crumbs = [{ label: 'Scopes', to: baseTo }];
+    if (pathname.endsWith('/add')) {
+      crumbs.push({ label: 'Add New Scope' });
     } else if (pathname.includes('/edit')) {
-      const match = pathname.match(/\/subnets\/(.+?)\/edit/);
+      const match = pathname.match(/\/(?:scopes|subnets)\/(.+?)\/edit/);
       if (match && match[1]) {
-        crumbs.push({ label: decodeURIComponent(match[1]), mono: true });
+        crumbs.push({ label: `Scope #${decodeURIComponent(match[1])}`, mono: true });
         crumbs.push({ label: 'Edit' });
       } else {
         crumbs.push({ label: 'Edit' });
@@ -44,12 +46,12 @@ function getBreadcrumbs(pathname) {
     return [{ label: 'Leases', to: '/leases' }];
   }
 
-  if (pathname.startsWith('/config')) {
-    return [{ label: 'DHCP Config', to: '/config' }];
+  if (pathname.startsWith('/logs') || pathname.startsWith('/service')) {
+    return [{ label: 'Logs', to: '/logs' }];
   }
 
-  if (pathname.startsWith('/service')) {
-    return [{ label: 'Service & Logs', to: '/service' }];
+  if (pathname.startsWith('/settings')) {
+    return [{ label: 'Settings', to: '/settings' }];
   }
 
   return [{ label: 'Dashboard', to: '/' }];

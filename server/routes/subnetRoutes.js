@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const dhcpConfigService = require('../services/dhcpConfigService');
 
-// GET /api/subnets
+// GET /api/subnets or /api/scopes
 router.get('/', authMiddleware, (req, res) => {
   try {
     const subnets = dhcpConfigService.getSubnets();
@@ -13,9 +13,25 @@ router.get('/', authMiddleware, (req, res) => {
   }
 });
 
+// GET /api/subnets/:id (by numeric id or subnet IP)
+router.get('/:id', authMiddleware, (req, res) => {
+  try {
+    const subnet = dhcpConfigService.getSubnetById(req.params.id);
+    if (!subnet) {
+      return res.status(404).json({ error: `Scope '${req.params.id}' not found` });
+    }
+    res.json(subnet);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/subnets
 router.post('/', authMiddleware, (req, res) => {
-  const { subnet, netmask, rangeStart, rangeEnd, routers, domainNameServers, domainName, defaultLeaseTime, maxLeaseTime } = req.body;
+  const { name, subnet, netmask, rangeStart, rangeEnd, routers, domainNameServers, domainName, defaultLeaseTime, maxLeaseTime, disabled } = req.body;
+  if (!name || !String(name).trim()) {
+    return res.status(400).json({ error: 'Scope name is required' });
+  }
   if (!subnet || !netmask) {
     return res.status(400).json({ error: 'Subnet and netmask are required' });
   }
@@ -35,8 +51,10 @@ router.post('/', authMiddleware, (req, res) => {
 
   try {
     const created = dhcpConfigService.createSubnet({
+      name: String(name).trim(),
       subnet,
       netmask,
+      disabled: Boolean(disabled),
       rangeStart: rangeStart || '',
       rangeEnd: rangeEnd || '',
       routers: routers || '',
@@ -54,20 +72,34 @@ router.post('/', authMiddleware, (req, res) => {
   }
 });
 
-// PUT /api/subnets/:subnet
-router.put('/:subnet', authMiddleware, (req, res) => {
+// PATCH /api/subnets/:id/toggle (toggle disabled/enabled)
+router.patch('/:id/toggle', authMiddleware, (req, res) => {
   try {
-    const updated = dhcpConfigService.updateSubnet(req.params.subnet, req.body);
+    const updated = dhcpConfigService.toggleSubnetDisabled(req.params.id);
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// DELETE /api/subnets/:subnet
-router.delete('/:subnet', authMiddleware, (req, res) => {
+// PUT /api/subnets/:id (by numeric id or subnet IP)
+router.put('/:id', authMiddleware, (req, res) => {
+  if (!req.body.name || !String(req.body.name).trim()) {
+    return res.status(400).json({ error: 'Scope name is required' });
+  }
+  req.body.name = String(req.body.name).trim();
   try {
-    const result = dhcpConfigService.deleteSubnet(req.params.subnet);
+    const updated = dhcpConfigService.updateSubnet(req.params.id, req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// DELETE /api/subnets/:id (by numeric id or subnet IP)
+router.delete('/:id', authMiddleware, (req, res) => {
+  try {
+    const result = dhcpConfigService.deleteSubnet(req.params.id);
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });

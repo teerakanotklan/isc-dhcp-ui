@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Edit2, Trash2, BookmarkCheck, Search, Copy, Check, RefreshCw } from 'lucide-react';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export function StaticIP({ setNotification }) {
   const { apiFetch } = useAuth();
@@ -9,6 +10,8 @@ export function StaticIP({ setNotification }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchHosts = async () => {
     try {
@@ -33,22 +36,24 @@ export function StaticIP({ setNotification }) {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const handleDelete = async (name) => {
-    if (!confirm(`Are you sure you want to remove host reservation '${name}'?`)) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
-      const res = await apiFetch(`/api/static-hosts/${name}`, {
+      setDeleting(true);
+      const res = await apiFetch(`/api/static-hosts/${encodeURIComponent(deleteTarget.name)}`, {
         method: 'DELETE',
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
 
-      setNotification({ type: 'success', message: `Host '${name}' reservation deleted` });
+      setNotification({ type: 'success', message: `Host '${deleteTarget.name}' reservation deleted` });
+      setDeleteTarget(null);
       fetchHosts();
     } catch (err) {
       setNotification({ type: 'danger', message: err.message });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -179,7 +184,7 @@ export function StaticIP({ setNotification }) {
                   <td className="text-right">
                     <div className="inline-flex items-center gap-1.5">
                       <Link
-                        to={`/static-hosts/${encodeURIComponent(h.name)}/edit`}
+                        to={`/static-hosts/${h.id || encodeURIComponent(h.name)}/edit`}
                         className="btn-icon"
                         title="Edit Host"
                       >
@@ -187,7 +192,7 @@ export function StaticIP({ setNotification }) {
                       </Link>
                       <button
                         className="btn-icon text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
-                        onClick={() => handleDelete(h.name)}
+                        onClick={() => setDeleteTarget(h)}
                         title="Delete Host"
                       >
                         <Trash2 size={14} />
@@ -208,6 +213,19 @@ export function StaticIP({ setNotification }) {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Host Reservation"
+        message={`Are you sure you want to delete static host reservation '${deleteTarget?.name}' (${deleteTarget?.ip})? This action cannot be undone.`}
+        confirmText="Delete Reservation"
+        loading={deleting}
+        loadingText="Deleting..."
+        danger={true}
+      />
     </div>
   );
 }

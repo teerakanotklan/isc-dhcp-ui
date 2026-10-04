@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { ConfirmModal } from '../components/ConfirmModal';
 import {
   Wifi,
   Search,
@@ -16,6 +17,8 @@ export function Leases({ setNotification }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [releaseTarget, setReleaseTarget] = useState(null);
+  const [releasing, setReleasing] = useState(false);
 
   const fetchLeases = async () => {
     try {
@@ -49,12 +52,12 @@ export function Leases({ setNotification }) {
     fetchLeases();
   };
 
-  const handleRelease = async (ip) => {
-    if (!confirm(`Are you sure you want to release the active lease for ${ip}?`)) {
-      return;
-    }
+  const confirmRelease = async () => {
+    if (!releaseTarget) return;
+    const ip = releaseTarget;
 
     try {
+      setReleasing(true);
       const res = await apiFetch(`/api/leases/${ip}/release`, {
         method: 'POST',
       });
@@ -65,6 +68,9 @@ export function Leases({ setNotification }) {
       fetchLeases();
     } catch (err) {
       setNotification({ type: 'danger', message: err.message });
+    } finally {
+      setReleasing(false);
+      setReleaseTarget(null);
     }
   };
 
@@ -248,7 +254,7 @@ export function Leases({ setNotification }) {
                     {l.status === 'active' && (
                       <button
                         className="btn btn-secondary text-xs py-1 px-2.5"
-                        onClick={() => handleRelease(l.ip)}
+                        onClick={() => setReleaseTarget(l.ip)}
                         title="Release this lease and mark as free"
                       >
                         <RotateCcw size={12} />
@@ -270,6 +276,19 @@ export function Leases({ setNotification }) {
           </table>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(releaseTarget)}
+        onClose={() => setReleaseTarget(null)}
+        onConfirm={confirmRelease}
+        variant="danger"
+        icon={RotateCcw}
+        title="Release Lease"
+        message={`Release the active lease for ${releaseTarget}? The client will lose this address and must request a new one.`}
+        confirmText="Release Lease"
+        loadingText="Releasing..."
+        loading={releasing}
+      />
     </div>
   );
 }

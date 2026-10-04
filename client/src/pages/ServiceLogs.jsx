@@ -2,40 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   Terminal,
-  RotateCw,
-  Power,
   RefreshCw,
   Search,
-  Activity,
-  AlertCircle,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  ShieldCheck
+  Clock
 } from 'lucide-react';
 
 export function ServiceLogs({ setNotification }) {
   const { apiFetch } = useAuth();
-  const [status, setStatus] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  const fetchStatusAndLogs = async () => {
+  const fetchLogs = async () => {
     try {
       setLoading(true);
-      const [resStatus, resLogs] = await Promise.all([
-        apiFetch('/api/service/status'),
-        apiFetch('/api/service/logs?limit=150'),
-      ]);
-
-      const dataStatus = await resStatus.json();
-      const dataLogs = await resLogs.json();
-
-      setStatus(dataStatus);
-      setLogs(dataLogs);
+      const res = await apiFetch('/api/service/logs?limit=150');
+      const data = await res.json();
+      setLogs(data);
     } catch (err) {
       setNotification({ type: 'danger', message: err.message });
     } finally {
@@ -44,37 +28,14 @@ export function ServiceLogs({ setNotification }) {
   };
 
   useEffect(() => {
-    fetchStatusAndLogs();
+    fetchLogs();
   }, []);
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchStatusAndLogs, 6000);
+    const interval = setInterval(fetchLogs, 6000);
     return () => clearInterval(interval);
   }, [autoRefresh]);
-
-  const handleAction = async (action) => {
-    if (!confirm(`Confirm execution of 'systemctl ${action} isc-dhcp-server'?`)) {
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-      const res = await apiFetch('/api/service/control', {
-        method: 'POST',
-        body: JSON.stringify({ action }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      setNotification({ type: 'success', message: data.message });
-      fetchStatusAndLogs();
-    } catch (err) {
-      setNotification({ type: 'danger', message: err.message });
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const filteredLogs = logs.filter((l) =>
     l.message.toLowerCase().includes(search.toLowerCase()) ||
@@ -87,10 +48,10 @@ export function ServiceLogs({ setNotification }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Service Control & System Logs
+            Logs
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Monitor systemd daemon operations and inspect live DHCP transaction logs
+            Monitor live isc-dhcp-server journalctl daemon transaction logs
           </p>
         </div>
 
@@ -104,97 +65,12 @@ export function ServiceLogs({ setNotification }) {
           </button>
           <button
             className="btn btn-secondary text-xs sm:text-sm"
-            onClick={fetchStatusAndLogs}
+            onClick={fetchLogs}
             disabled={loading}
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
-        </div>
-      </div>
-
-      {/* Service Control Card */}
-      <div className="glass-card">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4">
-            <div
-              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 border transition-colors ${
-                status?.active
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-              }`}
-            >
-              <Activity size={26} />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap mb-1">
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-mono">
-                  isc-dhcp-server.service
-                </h3>
-                <span className={`badge ${status?.active ? 'badge-active' : 'badge-danger'}`}>
-                  <span className="pulse-dot" />
-                  {status?.active ? 'Active (Running)' : 'Inactive / Stopped'}
-                </span>
-                {status?.isMock && (
-                  <span className="badge badge-info">Mock Environment</span>
-                )}
-              </div>
-
-              <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 flex items-center gap-3 sm:gap-6 flex-wrap">
-                {status?.pid && (
-                  <span>
-                    Main PID: <strong className="font-mono text-slate-700 dark:text-slate-200">{status.pid}</strong>
-                  </span>
-                )}
-                {status?.since && (
-                  <span className="flex items-center gap-1.5">
-                    <Clock size={13} />
-                    Uptime Since: {new Date(status.since).toLocaleString()}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 pt-4 lg:pt-0 border-t border-slate-200/80 dark:border-white/10 lg:border-none">
-            <button
-              className="btn btn-secondary text-xs sm:text-sm flex-1 sm:flex-initial"
-              onClick={() => handleAction('restart')}
-              disabled={actionLoading}
-            >
-              <RotateCw size={15} className="text-cyan-500" />
-              Restart
-            </button>
-            <button
-              className="btn btn-secondary text-xs sm:text-sm flex-1 sm:flex-initial"
-              onClick={() => handleAction('reload')}
-              disabled={actionLoading || !status?.active}
-            >
-              <RefreshCw size={15} className="text-amber-500" />
-              Reload
-            </button>
-            {status?.active ? (
-              <button
-                className="btn btn-danger text-xs sm:text-sm flex-1 sm:flex-initial"
-                onClick={() => handleAction('stop')}
-                disabled={actionLoading}
-              >
-                <Power size={15} />
-                Stop
-              </button>
-            ) : (
-              <button
-                className="btn btn-primary text-xs sm:text-sm flex-1 sm:flex-initial"
-                onClick={() => handleAction('start')}
-                disabled={actionLoading}
-              >
-                <Power size={15} />
-                Start
-              </button>
-            )}
-          </div>
         </div>
       </div>
 

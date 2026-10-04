@@ -5,9 +5,9 @@ import {
   Wifi,
   BookmarkCheck,
   Network,
-  FileCode,
   Terminal,
   Activity,
+  Settings,
   X
 } from 'lucide-react';
 
@@ -22,10 +22,10 @@ export function Sidebar({ isOpen, onClose }) {
       isActive: (pathname) => pathname === '/' || pathname === '/dashboard'
     },
     {
-      to: '/subnets',
-      label: 'Subnets',
+      to: '/scopes',
+      label: 'Scopes',
       icon: Network,
-      isActive: (pathname) => pathname.startsWith('/subnets')
+      isActive: (pathname) => pathname.startsWith('/scopes') || pathname.startsWith('/subnets')
     },
     {
       to: '/static-hosts',
@@ -40,16 +40,16 @@ export function Sidebar({ isOpen, onClose }) {
       isActive: (pathname) => pathname.startsWith('/leases')
     },
     {
-      to: '/config',
-      label: 'Config',
-      icon: FileCode,
-      isActive: (pathname) => pathname.startsWith('/config')
+      to: '/logs',
+      label: 'Logs',
+      icon: Terminal,
+      isActive: (pathname) => pathname.startsWith('/logs') || pathname.startsWith('/service')
     },
     {
-      to: '/service',
-      label: 'Service & Logs',
-      icon: Terminal,
-      isActive: (pathname) => pathname.startsWith('/service')
+      to: '/settings',
+      label: 'Settings',
+      icon: Settings,
+      isActive: (pathname) => pathname.startsWith('/settings')
     },
   ];
 

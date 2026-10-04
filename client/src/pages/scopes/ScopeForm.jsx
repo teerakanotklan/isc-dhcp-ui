@@ -3,13 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Network,
-  ArrowLeft,
   Save,
   Plus,
   Trash2,
   Sliders,
   Globe,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Power,
+  PowerOff
 } from 'lucide-react';
 
 const PREDEFINED_DHCP_OPTIONS = [
@@ -31,7 +32,7 @@ const PREDEFINED_DHCP_OPTIONS = [
   { value: 'custom', label: '⚡ Custom Option (Specify name manually)...', example: 'value or "string"' },
 ];
 
-export function SubnetForm({ setNotification }) {
+export function ScopeForm({ setNotification }) {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
@@ -41,8 +42,10 @@ export function SubnetForm({ setNotification }) {
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
+    name: '',
     subnet: '',
     netmask: '255.255.255.0',
+    disabled: false,
     rangeStart: '',
     rangeEnd: '',
     routers: '',
@@ -58,20 +61,20 @@ export function SubnetForm({ setNotification }) {
   useEffect(() => {
     if (!isEdit) return;
 
-    const fetchSubnetData = async () => {
+    const fetchScopeData = async () => {
       try {
         setLoading(true);
-        const res = await apiFetch('/api/subnets');
-        const subnets = await res.json();
-        const found = subnets.find((s) => s.subnet === id);
-
-        if (!found) {
-          throw new Error(`Subnet ${id} not found`);
+        const res = await apiFetch(`/api/scopes/${id}`);
+        if (!res.ok) {
+          throw new Error(`Scope #${id} not found`);
         }
+        const found = await res.json();
 
         setFormData({
+          name: found.name || '',
           subnet: found.subnet,
           netmask: found.netmask || '255.255.255.0',
+          disabled: Boolean(found.disabled),
           rangeStart: found.rangeStart || '',
           rangeEnd: found.rangeEnd || '',
           routers: found.routers || '',
@@ -97,23 +100,38 @@ export function SubnetForm({ setNotification }) {
         }
       } catch (err) {
         setNotification({ type: 'danger', message: err.message });
-        navigate('/subnets');
+        navigate('/scopes');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSubnetData();
+    fetchScopeData();
   }, [id, isEdit]);
 
-  const handleAddOption = () => {
-    setCustomOptions([
-      ...customOptions,
-      { type: 'ntp-servers', customName: '', value: '' },
-    ]);
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
-  const handleRemoveOption = (index) => {
+  const addCustomOption = (preset = null) => {
+    if (preset) {
+      setCustomOptions([
+        ...customOptions,
+        { type: preset, customName: '', value: '' },
+      ]);
+    } else {
+      setCustomOptions([
+        ...customOptions,
+        { type: 'ntp-servers', customName: '', value: '' },
+      ]);
+    }
+  };
+
+  const removeCustomOption = (index) => {
     setCustomOptions(customOptions.filter((_, i) => i !== index));
   };
 
@@ -158,24 +176,23 @@ export function SubnetForm({ setNotification }) {
 
     try {
       if (isEdit) {
-        const res = await apiFetch(`/api/subnets/${id}`, {
+        const res = await apiFetch(`/api/scopes/${id}`, {
           method: 'PUT',
           body: JSON.stringify(payload),
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error);
-        setNotification({ type: 'success', message: `Subnet ${formData.subnet} updated successfully` });
+        setNotification({ type: 'success', message: `Scope ${formData.subnet} updated successfully` });
       } else {
-        const res = await apiFetch('/api/subnets', {
+        const res = await apiFetch('/api/scopes', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error);
-        setNotification({ type: 'success', message: `Subnet ${formData.subnet} created successfully` });
+        setNotification({ type: 'success', message: `Scope ${formData.subnet} created successfully` });
       }
-
-      navigate('/subnets');
+      navigate('/scopes');
     } catch (err) {
       setNotification({ type: 'danger', message: err.message });
     } finally {
@@ -185,84 +202,114 @@ export function SubnetForm({ setNotification }) {
 
   if (loading) {
     return (
-      <div className="page-wrapper text-center py-24">
+      <div className="page-wrapper max-w-7xl mx-auto flex items-center justify-center py-20">
         <div className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">
-          Loading Subnet Details...
+          Loading Scope Details...
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page-wrapper max-w-7xl space-y-6">
-      {/* Header */}
+    <div className="page-wrapper max-w-7xl mx-auto space-y-6">
+      {/* Header (No Left Arrow, clean Breadcrumb + Action buttons) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3">
-            <button
-              className="btn-icon mt-1 sm:mt-0"
-              onClick={() => navigate('/subnets')}
-              title="Back to Subnets"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                {isEdit ? `Edit Subnet ${id}` : 'Create New Subnet'}
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
-                {isEdit
-                  ? 'Modify address pool range, routing options, and specialized DHCP parameters'
-                  : 'Define a new network segment and configure dynamic IP address allocation'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            <button
-              type="button"
-              className="btn btn-secondary text-xs sm:text-sm"
-              onClick={() => navigate('/subnets')}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary text-xs sm:text-sm"
-              onClick={handleSubmit}
-              disabled={saving}
-            >
-              <Save size={16} />
-              {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Subnet'}
-            </button>
-          </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            {isEdit ? `Edit Scope ${formData.subnet || '#' + id}` : 'Create New Scope'}
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-0.5">
+            {isEdit
+              ? 'Modify address pool range, routing options, and specialized DHCP parameters'
+              : 'Define a new network segment and configure dynamic IP address allocation'}
+          </p>
         </div>
+
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            type="button"
+            className="btn btn-secondary text-xs sm:text-sm"
+            onClick={() => navigate('/scopes')}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary text-xs sm:text-sm shadow-glow-indigo"
+            onClick={handleSubmit}
+            disabled={saving}
+          >
+            <Save size={16} />
+            {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Scope'}
+          </button>
+        </div>
+      </div>
 
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section 1: Network & Address Pool */}
         <div className="glass-card space-y-4">
-          <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/80 dark:border-white/10">
-            <Network size={20} className="text-indigo-500" />
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              1. Network Identification & IP Range
-            </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-white/10">
+            <div className="flex items-center gap-2.5">
+              <Network size={20} className="text-indigo-500" />
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                1. Network Identification & IP Range
+              </h2>
+            </div>
+
+            {/* Scope Disable / Enable Toggle Switch */}
+            <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                Scope Status:
+              </span>
+              <div
+                onClick={() => setFormData(p => ({ ...p, disabled: !p.disabled }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  !formData.disabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-white/20'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+                    !formData.disabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </div>
+              <span className={`text-xs font-bold ${!formData.disabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                {!formData.disabled ? 'Active (Enabled)' : 'Disabled'}
+              </span>
+            </label>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="form-group mb-0 sm:col-span-2">
+              <label className="form-label">Scope Name *</label>
+              <input
+                type="text"
+                className="input-text"
+                placeholder="Office LAN"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                maxLength={64}
+                required
+              />
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                Friendly label to identify this scope
+              </span>
+            </div>
+
             <div className="form-group mb-0">
-              <label className="form-label">Subnet Network IP *</label>
+              <label className="form-label">Scope Network IP *</label>
               <input
                 type="text"
                 className="input-text font-mono"
                 placeholder="192.168.1.0"
                 value={formData.subnet}
                 onChange={(e) => setFormData({ ...formData, subnet: e.target.value })}
-                disabled={isEdit}
                 required
               />
               <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                Base network address of the subnet (e.g. 192.168.1.0)
+                The network IP address identifying this scope
               </span>
             </div>
 
@@ -277,12 +324,12 @@ export function SubnetForm({ setNotification }) {
                 required
               />
               <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                Subnet mask in dotted decimal format (e.g. 255.255.255.0)
+                Specifies the network prefix (e.g. 255.255.255.0 for /24)
               </span>
             </div>
 
             <div className="form-group mb-0">
-              <label className="form-label">Dynamic Pool Range Start IP</label>
+              <label className="form-label">DHCP Pool Range Start</label>
               <input
                 type="text"
                 className="input-text font-mono"
@@ -290,10 +337,13 @@ export function SubnetForm({ setNotification }) {
                 value={formData.rangeStart}
                 onChange={(e) => setFormData({ ...formData, rangeStart: e.target.value })}
               />
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                First IP address in the dynamic leasing pool
+              </span>
             </div>
 
             <div className="form-group mb-0">
-              <label className="form-label">Dynamic Pool Range End IP</label>
+              <label className="form-label">DHCP Pool Range End</label>
               <input
                 type="text"
                 className="input-text font-mono"
@@ -301,22 +351,25 @@ export function SubnetForm({ setNotification }) {
                 value={formData.rangeEnd}
                 onChange={(e) => setFormData({ ...formData, rangeEnd: e.target.value })}
               />
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                Last IP address in the dynamic leasing pool
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Gateways, DNS & Lease Timers */}
+        {/* Section 2: Gateway, DNS & Timing Parameters */}
         <div className="glass-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/80 dark:border-white/10">
             <Globe size={20} className="text-cyan-500" />
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              2. Gateway, DNS & Lease Parameters
+              2. Gateway & Standard Network Parameters
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="form-group mb-0">
-              <label className="form-label">Default Gateway (option routers)</label>
+              <label className="form-label">Default Gateway (Routers)</label>
               <input
                 type="text"
                 className="input-text font-mono"
@@ -337,18 +390,15 @@ export function SubnetForm({ setNotification }) {
               />
             </div>
 
-            <div className="form-group mb-0 sm:col-span-2">
-              <label className="form-label">DNS Name Servers (comma separated)</label>
+            <div className="form-group mb-0">
+              <label className="form-label">DNS Name Servers</label>
               <input
                 type="text"
                 className="input-text font-mono"
-                placeholder="1.1.1.1, 8.8.8.8"
+                placeholder="8.8.8.8, 1.1.1.1"
                 value={formData.domainNameServers}
                 onChange={(e) => setFormData({ ...formData, domainNameServers: e.target.value })}
               />
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                DNS server IPs pushed to client devices
-              </span>
             </div>
 
             <div className="form-group mb-0">
@@ -366,26 +416,37 @@ export function SubnetForm({ setNotification }) {
               <label className="form-label">Default Lease Time (seconds)</label>
               <input
                 type="number"
-                className="input-text font-mono"
-                placeholder="86400"
+                className="input-text"
+                placeholder="86400 (1 day)"
                 value={formData.defaultLeaseTime}
                 onChange={(e) => setFormData({ ...formData, defaultLeaseTime: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group mb-0">
+              <label className="form-label">Max Lease Time (seconds)</label>
+              <input
+                type="number"
+                className="input-text"
+                placeholder="604800 (7 days)"
+                value={formData.maxLeaseTime}
+                onChange={(e) => setFormData({ ...formData, maxLeaseTime: e.target.value })}
               />
             </div>
           </div>
         </div>
 
-        {/* Section 3: Additional DHCP Options */}
+        {/* Section 3: Specialized & Additional DHCP Options */}
         <div className="glass-card space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-white/10">
             <div className="flex items-center gap-2.5">
-              <Sliders size={20} className="text-cyan-500" />
+              <SlidersHorizontal size={20} className="text-indigo-500" />
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-white">
                   3. Additional DHCP Options
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Configure advanced options like NTP, PXE boot, WINS, or custom vendor parameters
+                  Configure PXE boot directives, NTP servers, MTU sizes, and vendor custom options
                 </p>
               </div>
             </div>
@@ -393,105 +454,117 @@ export function SubnetForm({ setNotification }) {
             <button
               type="button"
               className="btn btn-secondary text-xs self-start sm:self-auto"
-              onClick={handleAddOption}
+              onClick={() => addCustomOption()}
             >
-              <Plus size={14} /> Add DHCP Option
+              <Plus size={14} /> Add Option
             </button>
           </div>
 
-          {customOptions.length === 0 ? (
-            <div className="inner-panel text-center py-10 text-slate-500 dark:text-slate-400 space-y-2">
-              <SlidersHorizontal size={28} className="mx-auto opacity-40 text-slate-400" />
-              <div className="text-xs sm:text-sm">No additional DHCP options specified for this subnet.</div>
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                Click <strong>+ Add DHCP Option</strong> to configure NTP, PXE boot, MTU, WPAD, or custom parameters.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {customOptions.map((opt, idx) => (
-                <div
-                  key={idx}
-                  className="inner-panel flex flex-col sm:flex-row items-stretch sm:items-start gap-3 p-3.5"
-                >
-                  {/* Select Option */}
-                  <div className="flex-1 min-w-[200px] space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block">
-                      Option Identifier
-                    </label>
-                    <select
-                      className="select-input font-mono text-xs sm:text-sm py-2"
-                      value={opt.type}
-                      onChange={(e) => handleOptionTypeChange(idx, e.target.value)}
-                    >
-                      {PREDEFINED_DHCP_OPTIONS.map((p) => (
-                        <option key={p.value} value={p.value} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
+          {/* Quick-add preset badges */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mr-1">
+              Quick Suggestions:
+            </span>
+            {['ntp-servers', 'bootfile-name', 'next-server', 'interface-mtu', 'domain-search', 'wpad'].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-500/20 dark:hover:text-indigo-300 border border-slate-200 dark:border-white/10 transition-colors"
+                onClick={() => addCustomOption(preset)}
+              >
+                + {preset}
+              </button>
+            ))}
+          </div>
 
-                    {opt.type === 'custom' && (
+          {/* Option rows list */}
+          {customOptions.length > 0 ? (
+            <div className="space-y-3 pt-2">
+              {customOptions.map((opt, index) => {
+                const isCustom = opt.type === 'custom';
+                return (
+                  <div
+                    key={index}
+                    className="inner-panel flex flex-col md:flex-row items-stretch md:items-center gap-3 p-3.5 transition-all"
+                  >
+                    {/* Option Selector */}
+                    <div className="w-full md:w-5/12">
+                      <select
+                        className="select-input text-xs sm:text-sm py-2"
+                        value={opt.type}
+                        onChange={(e) => handleOptionTypeChange(index, e.target.value)}
+                      >
+                        {PREDEFINED_DHCP_OPTIONS.map((p) => (
+                          <option key={p.value} value={p.value}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Custom Option Name Input (shown if 'custom' is selected) */}
+                    {isCustom && (
+                      <div className="w-full md:w-3/12">
+                        <input
+                          type="text"
+                          className="input-text text-xs sm:text-sm py-2 font-mono"
+                          placeholder="option-name"
+                          value={opt.customName}
+                          onChange={(e) => handleOptionFieldChange(index, 'customName', e.target.value)}
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {/* Option Value Input */}
+                    <div className="flex-1">
                       <input
                         type="text"
-                        className="input-text font-mono text-xs sm:text-sm py-1.5 mt-2"
-                        placeholder="Enter custom option name..."
-                        value={opt.customName}
-                        onChange={(e) => handleOptionFieldChange(idx, 'customName', e.target.value)}
+                        className="input-text text-xs sm:text-sm py-2 font-mono"
+                        placeholder={`e.g. ${getOptionExample(opt.type)}`}
+                        value={opt.value}
+                        onChange={(e) => handleOptionFieldChange(index, 'value', e.target.value)}
                         required
                       />
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Value Input */}
-                  <div className="flex-[2] min-w-[220px] space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block">
-                      Option Value / Parameter
-                    </label>
-                    <input
-                      type="text"
-                      className="input-text font-mono text-xs sm:text-sm py-2"
-                      placeholder={`Example: ${getOptionExample(opt.type)}`}
-                      value={opt.value}
-                      onChange={(e) => handleOptionFieldChange(idx, 'value', e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  {/* Delete Button */}
-                  <div className="flex sm:flex-col justify-end pt-1 sm:pt-6">
+                    {/* Remove Option Button */}
                     <button
                       type="button"
-                      className="btn-icon text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 p-2"
-                      onClick={() => handleRemoveOption(idx)}
-                      title="Remove Option"
+                      className="btn-icon text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 shrink-0 self-end md:self-center"
+                      onClick={() => removeCustomOption(index)}
+                      title="Remove option"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-xs text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
+              No additional DHCP options configured. Click "+ Add Option" or select a quick suggestion above.
             </div>
           )}
         </div>
 
-        {/* Bottom Actions */}
-        <div className="flex justify-end gap-3 pt-2">
+        {/* Footer Submit Buttons */}
+        <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
             className="btn btn-secondary text-sm"
-            onClick={() => navigate('/subnets')}
+            onClick={() => navigate('/scopes')}
             disabled={saving}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="btn btn-primary text-sm px-6"
+            className="btn btn-primary text-sm shadow-glow-indigo"
             disabled={saving}
           >
             <Save size={16} />
-            {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Subnet'}
+            {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Scope'}
           </button>
         </div>
       </form>

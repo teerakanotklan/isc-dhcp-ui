@@ -16,6 +16,19 @@ router.get('/', authMiddleware, (req, res) => {
   }
 });
 
+// GET /api/static-hosts/:id (by numeric id or host name)
+router.get('/:id', authMiddleware, (req, res) => {
+  try {
+    const host = dhcpConfigService.getHostById(req.params.id);
+    if (!host) {
+      return res.status(404).json({ error: `Host '${req.params.id}' not found` });
+    }
+    res.json(host);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/static-hosts
 router.post('/', authMiddleware, (req, res) => {
   const { name, mac, ip, description } = req.body;

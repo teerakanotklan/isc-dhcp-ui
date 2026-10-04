@@ -92,14 +92,22 @@ class DhcpConfigService {
     // regex matching: subnet <ip> netmask <mask> { <body> }
     const subnetRegex = /subnet\s+([0-9.]+)\s+netmask\s+([0-9.]+)\s*\{([^}]*)\}/g;
     let match;
+    let scopeIndex = 1;
     while ((match = subnetRegex.exec(raw)) !== null) {
       const net = match[1];
       const netmask = match[2];
       const body = match[3];
 
+      const isDisabled = /#\s*@scope-disabled/i.test(body) ||
+                         /ignore\s+booting\s*;/i.test(body) ||
+                         /deny\s+booting\s*;/i.test(body);
+
       const subnetObj = {
+        id: scopeIndex++,
+        name: '',
         subnet: net,
         netmask: netmask,
+        disabled: isDisabled,
         rangeStart: '',
         rangeEnd: '',
         routers: '',
@@ -110,6 +118,9 @@ class DhcpConfigService {
         defaultLeaseTime: '',
         maxLeaseTime: ''
       };
+
+      const nameMatch = body.match(/#\s*@scope-name:[ \t]*(.+)$/m);
+      if (nameMatch) subnetObj.name = nameMatch[1].trim();
 
       const rangeMatch = body.match(/range\s+([0-9.]+)\s+([0-9.]+);/);
       if (rangeMatch) {
@@ -178,6 +189,7 @@ class DhcpConfigService {
     // Parse Static Hosts
     // regex matching: host <name> { <body> }
     const hostRegex = /host\s+([\w\.-]+)\s*\{([^}]*)\}/g;
+    let hostIndex = 1;
     while ((match = hostRegex.exec(raw)) !== null) {
       const name = match[1];
       const body = match[2];
@@ -188,6 +200,7 @@ class DhcpConfigService {
 
       if (macMatch && ipMatch) {
         result.hosts.push({
+          id: hostIndex++,
           name: name,
           mac: macMatch[1].toLowerCase(),
           ip: ipMatch[1],
@@ -214,6 +227,13 @@ class DhcpConfigService {
     let newBlocks = '\n';
     for (const sub of subnets) {
       newBlocks += `subnet ${sub.subnet} netmask ${sub.netmask} {\n`;
+      if (sub.name) {
+        newBlocks += `  # @scope-name: ${String(sub.name).replace(/[\r\n}]+/g, ' ').trim()}\n`;
+      }
+      if (sub.disabled) {
+        newBlocks += `  # @scope-disabled: true\n`;
+        newBlocks += `  ignore booting;\n`;
+      }
       if (sub.rangeStart && sub.rangeEnd) {
         newBlocks += `  range ${sub.rangeStart} ${sub.rangeEnd};\n`;
       }
@@ -268,37 +288,64 @@ class DhcpConfigService {
   createSubnet(data) {
     const subnets = this.getSubnets();
     if (subnets.some(s => s.subnet === data.subnet)) {
-      throw new Error(`Subnet ${data.subnet} already exists`);
+      throw new Error(`Scope ${data.subnet} already exists`);
     }
-    subnets.push(data);
+    const newSubnet = { ...data, disabled: Boolean(data.disabled) };
+    subnets.push(newSubnet);
     this.saveSubnets(subnets);
-    return data;
+    return newSubnet;
   }
 
-  updateSubnet(targetSubnet, data) {
+  getSubnetById(idOrSubnet) {
     const subnets = this.getSubnets();
-    const index = subnets.findIndex(s => s.subnet === targetSubnet);
+    return subnets.find(s => String(s.id) === String(idOrSubnet) || s.subnet === idOrSubnet) || null;
+  }
+
+  updateSubnet(idOrSubnet, data) {
+    const subnets = this.getSubnets();
+    const index = subnets.findIndex(s => String(s.id) === String(idOrSubnet) || s.subnet === idOrSubnet);
     if (index === -1) {
-      throw new Error(`Subnet ${targetSubnet} not found`);
+      throw new Error(`Scope ${idOrSubnet} not found`);
     }
-    subnets[index] = { ...subnets[index], ...data };
+    if (data.subnet && data.subnet !== subnets[index].subnet) {
+      if (subnets.some((s, idx) => idx !== index && s.subnet === data.subnet)) {
+        throw new Error(`Scope ${data.subnet} already exists`);
+      }
+    }
+    subnets[index] = { ...subnets[index], ...data, id: subnets[index].id };
     this.saveSubnets(subnets);
     return subnets[index];
   }
 
-  deleteSubnet(targetSubnet) {
+  deleteSubnet(idOrSubnet) {
     const subnets = this.getSubnets();
-    const filtered = subnets.filter(s => s.subnet !== targetSubnet);
+    const filtered = subnets.filter(s => String(s.id) !== String(idOrSubnet) && s.subnet !== idOrSubnet);
     if (filtered.length === subnets.length) {
-      throw new Error(`Subnet ${targetSubnet} not found`);
+      throw new Error(`Scope ${idOrSubnet} not found`);
     }
     this.saveSubnets(filtered);
     return { success: true };
   }
 
+  toggleSubnetDisabled(idOrSubnet) {
+    const subnets = this.getSubnets();
+    const index = subnets.findIndex(s => String(s.id) === String(idOrSubnet) || s.subnet === idOrSubnet);
+    if (index === -1) {
+      throw new Error(`Scope ${idOrSubnet} not found`);
+    }
+    subnets[index].disabled = !subnets[index].disabled;
+    this.saveSubnets(subnets);
+    return subnets[index];
+  }
+
   // --- Static Host CRUD ---
   getStaticHosts() {
     return this.parseConfig().hosts;
+  }
+
+  getHostById(idOrName) {
+    const hosts = this.getStaticHosts();
+    return hosts.find(h => String(h.id) === String(idOrName) || h.name === idOrName) || null;
   }
 
   saveStaticHosts(hosts) {
@@ -348,11 +395,11 @@ class DhcpConfigService {
     return data;
   }
 
-  updateStaticHost(name, data) {
+  updateStaticHost(idOrName, data) {
     const hosts = this.getStaticHosts();
-    const index = hosts.findIndex(h => h.name === name);
+    const index = hosts.findIndex(h => String(h.id) === String(idOrName) || h.name === idOrName);
     if (index === -1) {
-      throw new Error(`Host '${name}' not found`);
+      throw new Error(`Host '${idOrName}' not found`);
     }
 
     const normalizedMac = data.mac.toLowerCase();
@@ -379,11 +426,11 @@ class DhcpConfigService {
     return hosts[index];
   }
 
-  deleteStaticHost(name) {
+  deleteStaticHost(idOrName) {
     const hosts = this.getStaticHosts();
-    const filtered = hosts.filter(h => h.name !== name);
+    const filtered = hosts.filter(h => String(h.id) !== String(idOrName) && h.name !== idOrName);
     if (filtered.length === hosts.length) {
-      throw new Error(`Host '${name}' not found`);
+      throw new Error(`Host '${idOrName}' not found`);
     }
     this.saveStaticHosts(filtered);
     return { success: true };
