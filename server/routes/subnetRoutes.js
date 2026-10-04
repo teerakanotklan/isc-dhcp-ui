@@ -28,7 +28,7 @@ router.get('/:id', authMiddleware, (req, res) => {
 
 // POST /api/subnets
 router.post('/', authMiddleware, (req, res) => {
-  const { name, subnet, netmask, rangeStart, rangeEnd, routers, domainNameServers, domainName, defaultLeaseTime, maxLeaseTime, disabled } = req.body;
+  const { name, subnet, netmask, rangeStart, rangeEnd, routers, domainNameServers, domainName, defaultLeaseTime, disabled } = req.body;
   if (!name || !String(name).trim()) {
     return res.status(400).json({ error: 'Scope name is required' });
   }
@@ -59,11 +59,9 @@ router.post('/', authMiddleware, (req, res) => {
       rangeEnd: rangeEnd || '',
       routers: routers || '',
       subnetMask: netmask,
-      broadcastAddress: req.body.broadcastAddress || '',
       domainNameServers: domainNameServers || '',
       domainName: domainName || '',
       defaultLeaseTime: defaultLeaseTime ? parseInt(defaultLeaseTime, 10) : '',
-      maxLeaseTime: maxLeaseTime ? parseInt(maxLeaseTime, 10) : '',
       customOptions: Array.isArray(req.body.customOptions) ? req.body.customOptions : []
     });
     res.status(201).json(created);

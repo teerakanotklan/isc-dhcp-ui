@@ -14,22 +14,22 @@ import {
 } from 'lucide-react';
 
 const PREDEFINED_DHCP_OPTIONS = [
-  { value: 'ntp-servers', label: 'ntp-servers (Option 42 - Network Time Protocol)', example: 'time.google.com, 192.168.1.1' },
-  { value: 'bootfile-name', label: 'bootfile-name (Option 67 - PXE Boot File Name)', example: '"pxelinux.0" or "ipxe.efi"' },
-  { value: 'tftp-server-name', label: 'tftp-server-name (Option 66 - TFTP Boot Server)', example: '"tftp.corp.lan" or 192.168.1.5' },
-  { value: 'next-server', label: 'next-server (Directive - PXE Server IP)', example: '192.168.1.5' },
-  { value: 'netbios-name-servers', label: 'netbios-name-servers (Option 44 - WINS Server)', example: '192.168.1.10, 192.168.1.11' },
-  { value: 'netbios-node-type', label: 'netbios-node-type (Option 46 - 1:B, 2:P, 4:M, 8:H)', example: '8' },
-  { value: 'domain-search', label: 'domain-search (Option 119 - Domain Search List)', example: '"corp.lan", "sales.corp.lan"' },
-  { value: 'interface-mtu', label: 'interface-mtu (Option 26 - MTU in bytes)', example: '1492' },
-  { value: 'default-ip-ttl', label: 'default-ip-ttl (Option 23 - Default Time To Live)', example: '64' },
-  { value: 'time-servers', label: 'time-servers (Option 4 - RFC 868 Time)', example: '192.168.1.1' },
-  { value: 'time-offset', label: 'time-offset (Option 2 - UTC offset in seconds)', example: '25200' },
-  { value: 'log-servers', label: 'log-servers (Option 7 - Syslog Servers)', example: '192.168.1.250' },
-  { value: 'wpad', label: 'wpad (Option 252 - Web Proxy PAC URL)', example: '"http://wpad.corp.lan/wpad.dat"' },
-  { value: 'captive-portal', label: 'captive-portal (Option 114 - Captive Portal URL)', example: '"https://login.wifi.corp.lan"' },
-  { value: 'vendor-encapsulated-options', label: 'vendor-encapsulated-options (Option 43)', example: '01:04:c0:a8:01:0a' },
-  { value: 'custom', label: '⚡ Custom Option (Specify name manually)...', example: 'value or "string"' },
+  { value: 'ntp-servers', label: 'ntp-servers (NTP Time Server)', example: 'time.google.com, 192.168.1.1' },
+  { value: 'bootfile-name', label: 'bootfile-name (PXE Boot File)', example: '"pxelinux.0" or "ipxe.efi"' },
+  { value: 'tftp-server-name', label: 'tftp-server-name (TFTP Server)', example: '"tftp.corp.lan" or 192.168.1.5' },
+  { value: 'next-server', label: 'next-server (PXE Server IP)', example: '192.168.1.5' },
+  { value: 'netbios-name-servers', label: 'netbios-name-servers (WINS Server)', example: '192.168.1.10, 192.168.1.11' },
+  { value: 'netbios-node-type', label: 'netbios-node-type (NetBIOS Node Type)', example: '8' },
+  { value: 'domain-search', label: 'domain-search (Search Domains)', example: '"corp.lan", "sales.corp.lan"' },
+  { value: 'interface-mtu', label: 'interface-mtu (MTU Size)', example: '1492' },
+  { value: 'default-ip-ttl', label: 'default-ip-ttl (IP TTL)', example: '64' },
+  { value: 'time-servers', label: 'time-servers (Time Server)', example: '192.168.1.1' },
+  { value: 'time-offset', label: 'time-offset (Time Offset in seconds)', example: '25200' },
+  { value: 'log-servers', label: 'log-servers (Syslog Server)', example: '192.168.1.250' },
+  { value: 'wpad', label: 'wpad (Proxy Auto-Discovery URL)', example: '"http://wpad.corp.lan/wpad.dat"' },
+  { value: 'captive-portal', label: 'captive-portal (Captive Portal URL)', example: '"https://login.wifi.corp.lan"' },
+  { value: 'vendor-encapsulated-options', label: 'vendor-encapsulated-options (Vendor Option 43)', example: '01:04:c0:a8:01:0a' },
+  { value: 'custom', label: 'Custom Option (Specify Name)...', example: 'value or "string"' },
 ];
 
 export function ScopeForm({ setNotification }) {
@@ -49,11 +49,9 @@ export function ScopeForm({ setNotification }) {
     rangeStart: '',
     rangeEnd: '',
     routers: '',
-    broadcastAddress: '',
     domainNameServers: '8.8.8.8, 1.1.1.1',
     domainName: '',
     defaultLeaseTime: 86400,
-    maxLeaseTime: 604800,
   });
 
   const [customOptions, setCustomOptions] = useState([]);
@@ -78,11 +76,9 @@ export function ScopeForm({ setNotification }) {
           rangeStart: found.rangeStart || '',
           rangeEnd: found.rangeEnd || '',
           routers: found.routers || '',
-          broadcastAddress: found.broadcastAddress || '',
           domainNameServers: found.domainNameServers || '',
           domainName: found.domainName || '',
           defaultLeaseTime: found.defaultLeaseTime || 86400,
-          maxLeaseTime: found.maxLeaseTime || 604800,
         });
 
         if (Array.isArray(found.customOptions)) {
@@ -380,17 +376,6 @@ export function ScopeForm({ setNotification }) {
             </div>
 
             <div className="form-group mb-0">
-              <label className="form-label">Broadcast Address</label>
-              <input
-                type="text"
-                className="input-text font-mono"
-                placeholder="192.168.1.255"
-                value={formData.broadcastAddress}
-                onChange={(e) => setFormData({ ...formData, broadcastAddress: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group mb-0">
               <label className="form-label">DNS Name Servers</label>
               <input
                 type="text"
@@ -420,17 +405,6 @@ export function ScopeForm({ setNotification }) {
                 placeholder="86400 (1 day)"
                 value={formData.defaultLeaseTime}
                 onChange={(e) => setFormData({ ...formData, defaultLeaseTime: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group mb-0">
-              <label className="form-label">Max Lease Time (seconds)</label>
-              <input
-                type="number"
-                className="input-text"
-                placeholder="604800 (7 days)"
-                value={formData.maxLeaseTime}
-                onChange={(e) => setFormData({ ...formData, maxLeaseTime: e.target.value })}
               />
             </div>
           </div>

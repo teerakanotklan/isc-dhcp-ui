@@ -3,6 +3,15 @@ const path = require('path');
 const config = require('../config/default');
 const backupService = require('./backupService');
 
+function calculateBroadcastAddress(subnet, netmask) {
+  if (!subnet || !netmask) return '';
+  const netParts = subnet.split('.').map(Number);
+  const maskParts = netmask.split('.').map(Number);
+  if (netParts.length !== 4 || maskParts.length !== 4) return '';
+  if (netParts.some(p => isNaN(p) || p < 0 || p > 255) || maskParts.some(p => isNaN(p) || p < 0 || p > 255)) return '';
+  return netParts.map((part, i) => (part | (~maskParts[i] & 255)) >>> 0).join('.');
+}
+
 class DhcpConfigService {
   constructor() {
     this.confPath = config.confPath;
@@ -243,8 +252,9 @@ class DhcpConfigService {
       if (sub.subnetMask || sub.netmask) {
         newBlocks += `  option subnet-mask ${sub.subnetMask || sub.netmask};\n`;
       }
-      if (sub.broadcastAddress) {
-        newBlocks += `  option broadcast-address ${sub.broadcastAddress};\n`;
+      const broadcastAddr = calculateBroadcastAddress(sub.subnet, sub.netmask || sub.subnetMask) || sub.broadcastAddress;
+      if (broadcastAddr) {
+        newBlocks += `  option broadcast-address ${broadcastAddr};\n`;
       }
       if (sub.domainNameServers) {
         newBlocks += `  option domain-name-servers ${sub.domainNameServers};\n`;
@@ -255,9 +265,7 @@ class DhcpConfigService {
       if (sub.defaultLeaseTime) {
         newBlocks += `  default-lease-time ${sub.defaultLeaseTime};\n`;
       }
-      if (sub.maxLeaseTime) {
-        newBlocks += `  max-lease-time ${sub.maxLeaseTime};\n`;
-      }
+
       if (Array.isArray(sub.customOptions)) {
         for (const opt of sub.customOptions) {
           if (opt && opt.name && opt.value !== undefined && opt.value !== '') {
