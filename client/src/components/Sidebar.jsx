@@ -71,7 +71,7 @@ export function Sidebar({ isOpen, onClose }) {
         }`}
       >
         {/* Header */}
-        <div className="p-5 flex items-center justify-between border-b border-slate-200 dark:border-white/10">
+        <div className="p-5 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white shadow-glow-indigo">
               <Activity size={22} />

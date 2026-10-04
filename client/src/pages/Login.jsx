@@ -1,13 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Server, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export function Login() {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
+
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // If already authenticated, redirect to callbackUrl immediately
+  useEffect(() => {
+    if (user) {
+      navigate(callbackUrl, { replace: true });
+    }
+  }, [user, callbackUrl, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,6 +28,7 @@ export function Login() {
     setLoading(true);
     try {
       await login(username, password);
+      navigate(callbackUrl, { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed. Check your credentials.');
     } finally {

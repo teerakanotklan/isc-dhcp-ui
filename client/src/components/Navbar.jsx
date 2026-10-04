@@ -1,25 +1,112 @@
 import React from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Moon, Sun, LogOut, Menu } from 'lucide-react';
+import { Moon, Sun, LogOut, Menu, ChevronRight } from 'lucide-react';
+
+function getBreadcrumbs(pathname) {
+  if (pathname === '/' || pathname === '/dashboard') {
+    return [{ label: 'Dashboard', to: '/' }];
+  }
+
+  if (pathname.startsWith('/subnets')) {
+    const crumbs = [{ label: 'Subnets', to: '/subnets' }];
+    if (pathname === '/subnets/add') {
+      crumbs.push({ label: 'Add New Subnet' });
+    } else if (pathname.includes('/edit')) {
+      const match = pathname.match(/\/subnets\/(.+?)\/edit/);
+      if (match && match[1]) {
+        crumbs.push({ label: decodeURIComponent(match[1]), mono: true });
+        crumbs.push({ label: 'Edit' });
+      } else {
+        crumbs.push({ label: 'Edit' });
+      }
+    }
+    return crumbs;
+  }
+
+  if (pathname.startsWith('/static-hosts')) {
+    const crumbs = [{ label: 'Static IPs', to: '/static-hosts' }];
+    if (pathname === '/static-hosts/add') {
+      crumbs.push({ label: 'Add Reservation' });
+    } else if (pathname.includes('/edit')) {
+      const match = pathname.match(/\/static-hosts\/(.+?)\/edit/);
+      if (match && match[1]) {
+        crumbs.push({ label: decodeURIComponent(match[1]), mono: true });
+        crumbs.push({ label: 'Edit' });
+      } else {
+        crumbs.push({ label: 'Edit' });
+      }
+    }
+    return crumbs;
+  }
+
+  if (pathname.startsWith('/leases')) {
+    return [{ label: 'Leases', to: '/leases' }];
+  }
+
+  if (pathname.startsWith('/config')) {
+    return [{ label: 'DHCP Config', to: '/config' }];
+  }
+
+  if (pathname.startsWith('/service')) {
+    return [{ label: 'Service & Logs', to: '/service' }];
+  }
+
+  return [{ label: 'Dashboard', to: '/' }];
+}
 
 export function Navbar({ theme, toggleTheme, onOpenMobileMenu }) {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const breadcrumbs = getBreadcrumbs(location.pathname);
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-sm dark:shadow-none">
-      {/* Left side: Hamburger button on mobile */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-sm dark:shadow-none gap-4">
+      {/* Left side: Hamburger button on mobile + Dynamic Breadcrumbs */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
-          className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors shrink-0"
           onClick={onOpenMobileMenu}
           aria-label="Open navigation menu"
         >
           <Menu size={20} />
         </button>
+
+        {/* Breadcrumb Navigation on TopNav */}
+        <nav className="flex items-center gap-1.5 text-xs sm:text-sm font-medium overflow-hidden" aria-label="Breadcrumb">
+          {breadcrumbs.map((crumb, idx) => {
+            const isLast = idx === breadcrumbs.length - 1;
+            return (
+              <React.Fragment key={idx}>
+                {idx > 0 && (
+                  <ChevronRight size={14} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                )}
+                {crumb.to && !isLast ? (
+                  <Link
+                    to={crumb.to}
+                    className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors whitespace-nowrap truncate max-w-[120px] sm:max-w-none"
+                  >
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span
+                    className={`${
+                      isLast
+                        ? 'text-slate-900 dark:text-white font-semibold'
+                        : 'text-slate-500 dark:text-slate-400'
+                    } ${crumb.mono ? 'font-mono text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10' : ''} whitespace-nowrap truncate`}
+                  >
+                    {crumb.label}
+                  </span>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Right side: Theme Switcher & Admin User Info */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Theme Toggle */}
         <button
           className="btn-icon"

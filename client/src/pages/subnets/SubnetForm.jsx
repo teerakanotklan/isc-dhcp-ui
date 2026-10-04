@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Network,
@@ -194,24 +194,9 @@ export function SubnetForm({ setNotification }) {
   }
 
   return (
-    <div className="page-wrapper max-w-4xl space-y-6">
-      {/* Breadcrumbs & Navigation Header */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <Link to="/subnets" className="text-cyan-600 dark:text-cyan-400 hover:underline">
-            Subnet Management
-          </Link>
-          <span>/</span>
-          {isEdit ? (
-            <span className="font-mono text-slate-800 dark:text-slate-200">{id}</span>
-          ) : (
-            <span>New Subnet</span>
-          )}
-          <span>/</span>
-          <span>{isEdit ? 'Edit Configuration' : 'Create'}</span>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="page-wrapper max-w-7xl space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3">
             <button
               className="btn-icon mt-1 sm:mt-0"
@@ -252,7 +237,6 @@ export function SubnetForm({ setNotification }) {
             </button>
           </div>
         </div>
-      </div>
 
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   BookmarkCheck,
@@ -96,24 +96,9 @@ export function StaticIPForm({ setNotification }) {
   }
 
   return (
-    <div className="page-wrapper max-w-2xl space-y-6">
-      {/* Breadcrumbs & Header */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <Link to="/static-hosts" className="text-cyan-600 dark:text-cyan-400 hover:underline">
-            Static IP (Hosts)
-          </Link>
-          <span>/</span>
-          {isEdit ? (
-            <span className="text-slate-800 dark:text-slate-200">{name}</span>
-          ) : (
-            <span>New Host</span>
-          )}
-          <span>/</span>
-          <span>{isEdit ? 'Edit Reservation' : 'Create'}</span>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="page-wrapper max-w-7xl space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3">
             <button
               className="btn-icon mt-1 sm:mt-0"
@@ -154,7 +139,6 @@ export function StaticIPForm({ setNotification }) {
             </button>
           </div>
         </div>
-      </div>
 
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="glass-card space-y-5">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
@@ -14,11 +14,23 @@ import { ConfigEditor } from './pages/ConfigEditor';
 import { ServiceLogs } from './pages/ServiceLogs';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
 
+// ProtectedRoute guard with Auth.js-style callbackUrl redirection
+function ProtectedRoute({ children }) {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (!user) {
+    const callbackUrl = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/login?callbackUrl=${callbackUrl}`} replace />;
+  }
+
+  return children;
+}
+
 export function AppContent() {
   const { user, loading, apiFetch } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('dhcp_theme') || 'dark');
   const [serviceStatus, setServiceStatus] = useState(null);
-  const [counts, setCounts] = useState({ subnets: 0, staticHosts: 0, activeLeases: 0 });
   const [notification, setNotification] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -55,21 +67,9 @@ export function AppContent() {
   const fetchServiceAndCounts = async () => {
     if (!user) return;
     try {
-      const [resStatus, resDash] = await Promise.all([
-        apiFetch('/api/service/status'),
-        apiFetch('/api/dashboard'),
-      ]);
+      const resStatus = await apiFetch('/api/service/status');
       const statusData = await resStatus.json();
-      const dashData = await resDash.json();
-
       setServiceStatus(statusData);
-      if (dashData?.counts) {
-        setCounts({
-          subnets: dashData.counts.subnets,
-          staticHosts: dashData.counts.staticHosts,
-          activeLeases: dashData.counts.activeLeases,
-        });
-      }
     } catch (e) {
       // background poll errors can fail gracefully
     }
@@ -93,51 +93,62 @@ export function AppContent() {
     );
   }
 
-  if (!user) {
-    return <Login />;
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#070a13] flex text-slate-900 dark:text-slate-100">
-      {/* Sidebar with responsive mobile drawer */}
-      <Sidebar
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
+    <>
+      <Routes>
+        {/* Dedicated Login Route */}
+        <Route path="/login" element={<Login />} />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-clip">
-        <Navbar
-          theme={theme}
-          toggleTheme={toggleTheme}
-          onOpenMobileMenu={() => setMobileMenuOpen(true)}
+        {/* Protected App Shell & Routes */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <div className="min-h-screen bg-slate-50 dark:bg-[#070a13] flex text-slate-900 dark:text-slate-100">
+                {/* Sidebar with responsive mobile drawer */}
+                <Sidebar
+                  isOpen={mobileMenuOpen}
+                  onClose={() => setMobileMenuOpen(false)}
+                />
+
+                <div className="flex-1 flex flex-col min-w-0 overflow-x-clip">
+                  <Navbar
+                    theme={theme}
+                    toggleTheme={toggleTheme}
+                    onOpenMobileMenu={() => setMobileMenuOpen(true)}
+                  />
+
+                  <main className="flex-1 pb-16">
+                    <Routes>
+                      {/* Dashboard */}
+                      <Route path="/" element={<Dashboard setNotification={setNotification} />} />
+                      <Route path="/dashboard" element={<Navigate to="/" replace />} />
+
+                      {/* Subnets Multi-Page */}
+                      <Route path="/subnets" element={<Subnets setNotification={setNotification} />} />
+                      <Route path="/subnets/add" element={<SubnetForm setNotification={setNotification} />} />
+                      <Route path="/subnets/:id/edit" element={<SubnetForm setNotification={setNotification} />} />
+
+                      {/* Static IP Multi-Page */}
+                      <Route path="/static-hosts" element={<StaticIP setNotification={setNotification} />} />
+                      <Route path="/static-hosts/add" element={<StaticIPForm setNotification={setNotification} />} />
+                      <Route path="/static-hosts/:name/edit" element={<StaticIPForm setNotification={setNotification} />} />
+
+                      {/* Leases, Config, Service */}
+                      <Route path="/leases" element={<Leases setNotification={setNotification} />} />
+                      <Route path="/config" element={<ConfigEditor setNotification={setNotification} />} />
+                      <Route path="/service" element={<ServiceLogs setNotification={setNotification} />} />
+
+                      {/* Fallback */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </main>
+                </div>
+              </div>
+            </ProtectedRoute>
+          }
         />
-
-        <main className="flex-1 pb-16">
-          <Routes>
-            {/* Dashboard */}
-            <Route path="/" element={<Dashboard setNotification={setNotification} />} />
-            <Route path="/dashboard" element={<Navigate to="/" replace />} />
-
-            {/* Subnets Multi-Page */}
-            <Route path="/subnets" element={<Subnets setNotification={setNotification} />} />
-            <Route path="/subnets/add" element={<SubnetForm setNotification={setNotification} />} />
-            <Route path="/subnets/:id/edit" element={<SubnetForm setNotification={setNotification} />} />
-
-            {/* Static IP Multi-Page */}
-            <Route path="/static-hosts" element={<StaticIP setNotification={setNotification} />} />
-            <Route path="/static-hosts/add" element={<StaticIPForm setNotification={setNotification} />} />
-            <Route path="/static-hosts/:name/edit" element={<StaticIPForm setNotification={setNotification} />} />
-
-            {/* Leases, Config, Service */}
-            <Route path="/leases" element={<Leases setNotification={setNotification} />} />
-            <Route path="/config" element={<ConfigEditor setNotification={setNotification} />} />
-            <Route path="/service" element={<ServiceLogs setNotification={setNotification} />} />
-
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+      </Routes>
 
       {/* Global Toast Notification */}
       {notification && (
@@ -165,7 +176,7 @@ export function AppContent() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
