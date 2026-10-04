@@ -12,6 +12,7 @@ import { StaticIP } from './pages/static-hosts/StaticIP';
 import { StaticIPForm } from './pages/static-hosts/StaticIPForm';
 import { Leases } from './pages/Leases';
 import { ServiceLogs } from './pages/ServiceLogs';
+import { NotFound } from './pages/NotFound';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
 
 // ProtectedRoute guard with Auth.js-style callbackUrl redirection
@@ -139,8 +140,8 @@ export function AppContent() {
                       {/* Settings */}
                       <Route path="/settings" element={<Settings setNotification={setNotification} />} />
 
-                      {/* Fallback */}
-                      <Route path="*" element={<Navigate to="/" replace />} />
+                      {/* Fallback 404 Error Page */}
+                      <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>
                 </div>
