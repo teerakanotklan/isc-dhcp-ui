@@ -11,17 +11,7 @@ class SystemService {
       uptime: new Date(Date.now() - 3600000 * 28).toISOString(), // 28 hours uptime
       pid: 1420
     };
-    this.mockLogs = [
-      { timestamp: new Date(Date.now() - 600000).toISOString(), message: 'dhcpd: DHCPDISCOVER from 3c:22:fb:1a:90:bc via eth0' },
-      { timestamp: new Date(Date.now() - 599000).toISOString(), message: 'dhcpd: DHCPOFFER on 192.168.1.101 to 3c:22:fb:1a:90:bc (MacBook-Pro-Dev) via eth0' },
-      { timestamp: new Date(Date.now() - 598000).toISOString(), message: 'dhcpd: DHCPREQUEST for 192.168.1.101 (192.168.1.1) from 3c:22:fb:1a:90:bc (MacBook-Pro-Dev) via eth0' },
-      { timestamp: new Date(Date.now() - 597000).toISOString(), message: 'dhcpd: DHCPACK on 192.168.1.101 to 3c:22:fb:1a:90:bc (MacBook-Pro-Dev) via eth0' },
-      { timestamp: new Date(Date.now() - 300000).toISOString(), message: 'dhcpd: DHCPDISCOVER from b8:27:eb:8f:91:0a via eth0' },
-      { timestamp: new Date(Date.now() - 299000).toISOString(), message: 'dhcpd: DHCPOFFER on 10.0.0.55 to b8:27:eb:8f:91:0a (RaspberryPi-IoT-Gateway) via eth0' },
-      { timestamp: new Date(Date.now() - 298000).toISOString(), message: 'dhcpd: DHCPREQUEST for 10.0.0.55 from b8:27:eb:8f:91:0a (RaspberryPi-IoT-Gateway) via eth0' },
-      { timestamp: new Date(Date.now() - 297000).toISOString(), message: 'dhcpd: DHCPACK on 10.0.0.55 to b8:27:eb:8f:91:0a (RaspberryPi-IoT-Gateway) via eth0' },
-      { timestamp: new Date(Date.now() - 60000).toISOString(), message: 'dhcpd: Configuration file check passed successfully.' },
-    ];
+    this.mockLogs = [];
   }
 
   getServiceStatus() {

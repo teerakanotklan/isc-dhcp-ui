@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const config = require('../config/default');
 const backupService = require('./backupService');
 
@@ -96,6 +97,15 @@ class DhcpConfigService {
     result.global.authoritative = /authoritative\s*;/.test(raw);
     const ddnsMatch = raw.match(/ddns-update-style\s+([\w-]+);/);
     if (ddnsMatch) result.global.ddnsUpdateStyle = ddnsMatch[1];
+
+    const logMatch = raw.match(/log-facility\s+([\w-]+);/);
+    if (logMatch) result.global.logFacility = logMatch[1];
+
+    const domainMatch = raw.match(/option\s+domain-name\s+"([^"]+)";/);
+    if (domainMatch) result.global.domainName = domainMatch[1];
+
+    const dnsMatch = raw.match(/option\s+domain-name-servers\s+([^;]+);/);
+    if (dnsMatch) result.global.domainNameServers = dnsMatch[1];
 
     // Parse Subnets
     // regex matching: subnet <ip> netmask <mask> { <body> }
@@ -442,6 +452,160 @@ class DhcpConfigService {
     }
     this.saveStaticHosts(filtered);
     return { success: true };
+  }
+
+  // --- Global Settings & Interface Options ---
+  getInterfacesConfig() {
+    const res = { interfacesv4: 'eth0', interfacesv6: '' };
+    try {
+      if (fs.existsSync(config.interfacesPath)) {
+        const content = fs.readFileSync(config.interfacesPath, 'utf8');
+        const v4Match = content.match(/INTERFACESv4="([^"]*)"/);
+        const v6Match = content.match(/INTERFACESv6="([^"]*)"/);
+        if (v4Match) res.interfacesv4 = v4Match[1];
+        if (v6Match) res.interfacesv6 = v6Match[1];
+      }
+    } catch (e) {}
+    return res;
+  }
+
+  saveInterfacesConfig(v4, v6) {
+    let content = '';
+    try {
+      if (fs.existsSync(config.interfacesPath)) {
+        content = fs.readFileSync(config.interfacesPath, 'utf8');
+      } else {
+        content = '# Defaults for isc-dhcp-server\nINTERFACESv4=""\nINTERFACESv6=""\n';
+      }
+    } catch (e) {
+      content = '# Defaults for isc-dhcp-server\nINTERFACESv4=""\nINTERFACESv6=""\n';
+    }
+
+    if (v4 !== undefined) {
+      if (/INTERFACESv4="[^"]*"/.test(content)) {
+        content = content.replace(/INTERFACESv4="[^"]*"/, `INTERFACESv4="${v4}"`);
+      } else {
+        content += `\nINTERFACESv4="${v4}"`;
+      }
+    }
+
+    if (v6 !== undefined) {
+      if (/INTERFACESv6="[^"]*"/.test(content)) {
+        content = content.replace(/INTERFACESv6="[^"]*"/, `INTERFACESv6="${v6}"`);
+      } else {
+        content += `\nINTERFACESv6="${v6}"`;
+      }
+    }
+
+    fs.writeFileSync(config.interfacesPath, content, 'utf8');
+  }
+
+  getSystemInterfaces() {
+    try {
+      const netInterfaces = os.networkInterfaces();
+      const list = Object.keys(netInterfaces).filter(name => name !== 'lo' && !name.startsWith('Loopback'));
+      return list.length > 0 ? list : ['eth0', 'eth1'];
+    } catch (e) {
+      return ['eth0', 'eth1'];
+    }
+  }
+
+  getGlobalSettings() {
+    const parsed = this.parseConfig();
+    const interfaces = this.getInterfacesConfig();
+    const systemInterfaces = this.getSystemInterfaces();
+
+    return {
+      defaultLeaseTime: parsed.global.defaultLeaseTime || 86400,
+      maxLeaseTime: parsed.global.maxLeaseTime || 604800,
+      authoritative: Boolean(parsed.global.authoritative),
+      ddnsUpdateStyle: parsed.global.ddnsUpdateStyle || 'none',
+      logFacility: parsed.global.logFacility || 'local7',
+      domainName: parsed.global.domainName || '',
+      domainNameServers: parsed.global.domainNameServers || '',
+      interfacesv4: interfaces.interfacesv4,
+      interfacesv6: interfaces.interfacesv6,
+      systemInterfaces: systemInterfaces,
+      confPath: this.confPath,
+      interfacesPath: config.interfacesPath
+    };
+  }
+
+  updateGlobalSettings(data) {
+    let raw = this.getRawConfig();
+
+    // default-lease-time
+    if (data.defaultLeaseTime !== undefined) {
+      if (/default-lease-time\s+\d+;/.test(raw)) {
+        raw = raw.replace(/default-lease-time\s+\d+;/, `default-lease-time ${data.defaultLeaseTime};`);
+      } else {
+        raw = `default-lease-time ${data.defaultLeaseTime};\n` + raw;
+      }
+    }
+
+    // max-lease-time
+    if (data.maxLeaseTime !== undefined) {
+      if (/max-lease-time\s+\d+;/.test(raw)) {
+        raw = raw.replace(/max-lease-time\s+\d+;/, `max-lease-time ${data.maxLeaseTime};`);
+      } else {
+        raw = `max-lease-time ${data.maxLeaseTime};\n` + raw;
+      }
+    }
+
+    // authoritative
+    if (data.authoritative !== undefined) {
+      if (data.authoritative) {
+        if (!/authoritative\s*;/.test(raw)) {
+          raw = raw.replace(/(default-lease-time|max-lease-time)[^;]+;\n?/, '$&\nauthoritative;\n');
+        }
+      } else {
+        raw = raw.replace(/authoritative\s*;\n?/g, '');
+      }
+    }
+
+    // ddns-update-style
+    if (data.ddnsUpdateStyle) {
+      if (/ddns-update-style\s+[\w-]+;/.test(raw)) {
+        raw = raw.replace(/ddns-update-style\s+[\w-]+;/, `ddns-update-style ${data.ddnsUpdateStyle};`);
+      } else {
+        raw += `\nddns-update-style ${data.ddnsUpdateStyle};\n`;
+      }
+    }
+
+    // log-facility
+    if (data.logFacility) {
+      if (/log-facility\s+[\w-]+;/.test(raw)) {
+        raw = raw.replace(/log-facility\s+[\w-]+;/, `log-facility ${data.logFacility};`);
+      } else {
+        raw += `\nlog-facility ${data.logFacility};\n`;
+      }
+    }
+
+    // option domain-name
+    if (data.domainName !== undefined) {
+      if (/option\s+domain-name\s+"[^"]*";/.test(raw)) {
+        raw = raw.replace(/option\s+domain-name\s+"[^"]*";/, `option domain-name "${data.domainName}";`);
+      } else if (data.domainName) {
+        raw += `\noption domain-name "${data.domainName}";\n`;
+      }
+    }
+
+    // option domain-name-servers
+    if (data.domainNameServers !== undefined) {
+      if (/option\s+domain-name-servers\s+[^;]+;/.test(raw)) {
+        raw = raw.replace(/option\s+domain-name-servers\s+[^;]+;/, `option domain-name-servers ${data.domainNameServers};`);
+      } else if (data.domainNameServers) {
+        raw += `\noption domain-name-servers ${data.domainNameServers};\n`;
+      }
+    }
+
+    this.saveRawConfig(raw, 'Global server settings updated');
+
+    if (data.interfacesv4 !== undefined || data.interfacesv6 !== undefined) {
+      this.saveInterfacesConfig(data.interfacesv4, data.interfacesv6);
+    }
+
+    return this.getGlobalSettings();
   }
 }
 

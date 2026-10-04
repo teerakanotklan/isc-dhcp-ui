@@ -19,6 +19,7 @@ const mockLeasesSource = path.join(__dirname, '..', 'mock', 'sample-dhcpd.leases
 
 const localConfPath = path.join(dataDir, 'dhcpd.conf');
 const localLeasesPath = path.join(dataDir, 'dhcpd.leases');
+const localInterfacesPath = path.join(dataDir, 'isc-dhcp-server');
 
 if (!fs.existsSync(localConfPath) && fs.existsSync(mockConfSource)) {
   fs.copyFileSync(mockConfSource, localConfPath);
@@ -26,6 +27,14 @@ if (!fs.existsSync(localConfPath) && fs.existsSync(mockConfSource)) {
 
 if (!fs.existsSync(localLeasesPath) && fs.existsSync(mockLeasesSource)) {
   fs.copyFileSync(mockLeasesSource, localLeasesPath);
+}
+
+if (!fs.existsSync(localInterfacesPath)) {
+  fs.writeFileSync(
+    localInterfacesPath,
+    '# Defaults for isc-dhcp-server\nINTERFACESv4="eth0"\nINTERFACESv6=""\n',
+    'utf8'
+  );
 }
 
 const backupDir = path.join(dataDir, 'backups');
@@ -40,6 +49,7 @@ module.exports = {
   isMock,
   confPath: isMock ? localConfPath : '/etc/dhcp/dhcpd.conf',
   leasesPath: isMock ? localLeasesPath : '/var/lib/dhcp/dhcpd.leases',
+  interfacesPath: isMock ? localInterfacesPath : '/etc/default/isc-dhcp-server',
   backupDir: isMock ? backupDir : '/etc/dhcp/backups',
   serviceName: 'isc-dhcp-server',
 };

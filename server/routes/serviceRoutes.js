@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const systemService = require('../services/systemService');
+const dhcpConfigService = require('../services/dhcpConfigService');
 
 // GET /api/service/status
 router.get('/status', authMiddleware, (req, res) => {
@@ -10,6 +11,26 @@ router.get('/status', authMiddleware, (req, res) => {
     res.json(status);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/service/settings
+router.get('/settings', authMiddleware, (req, res) => {
+  try {
+    const settings = dhcpConfigService.getGlobalSettings();
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/service/settings
+router.put('/settings', authMiddleware, (req, res) => {
+  try {
+    const updated = dhcpConfigService.updateGlobalSettings(req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

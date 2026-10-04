@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Server, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Server, Lock, User, ArrowRight } from 'lucide-react';
 
 export function Login() {
   const { user, login } = useAuth();
@@ -10,8 +10,8 @@ export function Login() {
 
   const callbackUrl = searchParams.get('callbackUrl') || '/';
 
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -68,7 +68,7 @@ export function Login() {
               <input
                 type="text"
                 className="input-text pl-10"
-                placeholder="admin"
+                placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -107,13 +107,6 @@ export function Login() {
             <ArrowRight size={17} />
           </button>
         </form>
-
-        <div className="mt-7 inner-panel flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
-          <ShieldCheck size={20} className="text-cyan-500 shrink-0" />
-          <div>
-            Default Admin: <strong className="text-slate-900 dark:text-white">admin</strong> / <strong className="text-slate-900 dark:text-white">admin123</strong>
-          </div>
-        </div>
       </div>
     </div>
   );

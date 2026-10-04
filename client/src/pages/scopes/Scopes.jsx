@@ -268,11 +268,6 @@ export function Scopes({ setNotification }) {
                       <span className="font-medium text-sm">
                         {search ? `No scopes matching "${search}"` : 'No scopes configured'}
                       </span>
-                      {!search && (
-                        <Link to="/scopes/add" className="btn btn-primary text-xs mt-2">
-                          <Plus size={14} /> Add First Scope
-                        </Link>
-                      )}
                     </div>
                   </td>
                 </tr>
