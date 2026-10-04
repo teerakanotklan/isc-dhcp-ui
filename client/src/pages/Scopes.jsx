@@ -176,7 +176,6 @@ export function Scopes({ setNotification }) {
               <tr>
                 <th className="text-center w-16">No.</th>
                 <th>Scope Name</th>
-                <th>Scope</th>
                 <th>CIDR</th>
                 <th>Status</th>
                 <th className="text-right">Action</th>
@@ -197,29 +196,6 @@ export function Scopes({ setNotification }) {
                     {/* Scope Name */}
                     <td className={`font-semibold text-sm ${isDisabled ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`}>
                       {sub.name || <span className="text-slate-400">-</span>}
-                    </td>
-
-                    {/* 2. Scope */}
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                            isDisabled
-                              ? 'bg-slate-100 dark:bg-white/5 text-slate-400'
-                              : 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400'
-                          }`}
-                        >
-                          <Network size={18} />
-                        </div>
-                        <div>
-                          <div className={`font-mono font-bold text-sm ${isDisabled ? 'text-slate-500 dark:text-slate-400 line-through' : 'text-slate-900 dark:text-white'}`}>
-                            {sub.subnet}
-                          </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                            Netmask: {sub.netmask}
-                          </div>
-                        </div>
-                      </div>
                     </td>
 
                     {/* CIDR */}
@@ -286,7 +262,7 @@ export function Scopes({ setNotification }) {
 
               {filteredScopes.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-slate-500 dark:text-slate-400">
+                  <td colSpan={5} className="text-center py-12 text-slate-500 dark:text-slate-400">
                     <div className="flex flex-col items-center gap-2">
                       <Network size={36} className="text-slate-400 opacity-60" />
                       <span className="font-medium text-sm">
