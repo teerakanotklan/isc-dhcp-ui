@@ -1,4 +1,4 @@
-const dhcpConfigService = require('./services/dhcpConfigService');
+const dhcpConfigService = require('../services/dhcpConfigService');
 
 console.log('--- Testing Subnet Additional DHCP Options ---');
 

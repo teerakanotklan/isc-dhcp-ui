@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { useAuth } from '../../context/AuthContext';
+import { ConfirmModal } from '../../components/ConfirmModal';
 import {
   Plus,
   Edit2,

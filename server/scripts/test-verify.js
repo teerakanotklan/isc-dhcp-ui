@@ -1,7 +1,7 @@
-const authService = require('./services/authService');
-const dhcpConfigService = require('./services/dhcpConfigService');
-const dhcpLeaseService = require('./services/dhcpLeaseService');
-const systemService = require('./services/systemService');
+const authService = require('../services/authService');
+const dhcpConfigService = require('../services/dhcpConfigService');
+const dhcpLeaseService = require('../services/dhcpLeaseService');
+const systemService = require('../services/systemService');
 
 console.log('--- ISC DHCP Server UI Verification Test ---');
 

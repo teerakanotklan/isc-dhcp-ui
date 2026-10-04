@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { Plus, Edit2, Trash2, BookmarkCheck, Search, Copy, Check, RefreshCw } from 'lucide-react';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 export function StaticIP({ setNotification }) {
   const { apiFetch } = useAuth();

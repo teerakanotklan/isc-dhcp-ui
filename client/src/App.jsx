@@ -5,10 +5,10 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
-import { Scopes } from './pages/Scopes';
+import { Scopes } from './pages/scopes/Scopes';
 import { ScopeForm } from './pages/scopes/ScopeForm';
 import { Settings } from './pages/Settings';
-import { StaticIP } from './pages/StaticIP';
+import { StaticIP } from './pages/static-hosts/StaticIP';
 import { StaticIPForm } from './pages/static-hosts/StaticIPForm';
 import { Leases } from './pages/Leases';
 import { ServiceLogs } from './pages/ServiceLogs';
@@ -122,18 +122,11 @@ export function AppContent() {
                     <Routes>
                       {/* Dashboard */}
                       <Route path="/" element={<Dashboard setNotification={setNotification} />} />
-                      <Route path="/dashboard" element={<Navigate to="/" replace />} />
 
                       {/* Scopes Multi-Page */}
                       <Route path="/scopes" element={<Scopes setNotification={setNotification} />} />
                       <Route path="/scopes/add" element={<ScopeForm setNotification={setNotification} />} />
                       <Route path="/scopes/:id/edit" element={<ScopeForm setNotification={setNotification} />} />
-
-                      {/* Subnets backward compatibility redirects */}
-                      <Route path="/subnets" element={<Navigate to="/scopes" replace />} />
-                      <Route path="/subnets/add" element={<Navigate to="/scopes/add" replace />} />
-                      <Route path="/subnets/:id/edit" element={<Navigate to="/scopes" replace />} />
-
                       {/* Static IP Multi-Page */}
                       <Route path="/static-hosts" element={<StaticIP setNotification={setNotification} />} />
                       <Route path="/static-hosts/add" element={<StaticIPForm setNotification={setNotification} />} />
@@ -142,8 +135,6 @@ export function AppContent() {
                       {/* Leases & Logs */}
                       <Route path="/leases" element={<Leases setNotification={setNotification} />} />
                       <Route path="/logs" element={<ServiceLogs setNotification={setNotification} />} />
-                      <Route path="/service" element={<Navigate to="/logs" replace />} />
-                      <Route path="/config" element={<Navigate to="/" replace />} />
 
                       {/* Settings */}
                       <Route path="/settings" element={<Settings setNotification={setNotification} />} />

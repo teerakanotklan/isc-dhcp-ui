@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
-import { SERVICE_ACTION_META } from '../components/serviceActionMeta';
+import { SERVICE_ACTION_META } from '../constants/serviceActionMeta';
 import {
   Settings as SettingsIcon,
   RotateCw,

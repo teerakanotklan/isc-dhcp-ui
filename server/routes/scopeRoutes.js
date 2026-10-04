@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const dhcpConfigService = require('../services/dhcpConfigService');
 
-// GET /api/subnets or /api/scopes
+// GET /api/scopes
 router.get('/', authMiddleware, (req, res) => {
   try {
     const subnets = dhcpConfigService.getSubnets();
@@ -13,7 +13,7 @@ router.get('/', authMiddleware, (req, res) => {
   }
 });
 
-// GET /api/subnets/:id (by numeric id or subnet IP)
+// GET /api/scopes/:id (by numeric id or subnet IP)
 router.get('/:id', authMiddleware, (req, res) => {
   try {
     const subnet = dhcpConfigService.getSubnetById(req.params.id);
@@ -26,7 +26,7 @@ router.get('/:id', authMiddleware, (req, res) => {
   }
 });
 
-// POST /api/subnets
+// POST /api/scopes
 router.post('/', authMiddleware, (req, res) => {
   const { name, subnet, netmask, rangeStart, rangeEnd, routers, domainNameServers, domainName, defaultLeaseTime, disabled } = req.body;
   if (!name || !String(name).trim()) {
@@ -70,7 +70,7 @@ router.post('/', authMiddleware, (req, res) => {
   }
 });
 
-// PATCH /api/subnets/:id/toggle (toggle disabled/enabled)
+// PATCH /api/scopes/:id/toggle (toggle disabled/enabled)
 router.patch('/:id/toggle', authMiddleware, (req, res) => {
   try {
     const updated = dhcpConfigService.toggleSubnetDisabled(req.params.id);
@@ -80,7 +80,7 @@ router.patch('/:id/toggle', authMiddleware, (req, res) => {
   }
 });
 
-// PUT /api/subnets/:id (by numeric id or subnet IP)
+// PUT /api/scopes/:id (by numeric id or subnet IP)
 router.put('/:id', authMiddleware, (req, res) => {
   if (!req.body.name || !String(req.body.name).trim()) {
     return res.status(400).json({ error: 'Scope name is required' });
@@ -94,7 +94,7 @@ router.put('/:id', authMiddleware, (req, res) => {
   }
 });
 
-// DELETE /api/subnets/:id (by numeric id or subnet IP)
+// DELETE /api/scopes/:id (by numeric id or subnet IP)
 router.delete('/:id', authMiddleware, (req, res) => {
   try {
     const result = dhcpConfigService.deleteSubnet(req.params.id);

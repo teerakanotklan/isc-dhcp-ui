@@ -39,6 +39,8 @@ client/dist
 .env.local
 .env.*.local
 
-# Server runtime backups
+# Server runtime data (seeded from server/mock on first run)
+server/data/*
+!server/data/backups/
 server/data/backups/*
 !server/data/backups/.gitkeep

@@ -5,10 +5,9 @@ const config = require('./config/default');
 
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
-const subnetRoutes = require('./routes/subnetRoutes');
+const scopeRoutes = require('./routes/scopeRoutes');
 const staticHostRoutes = require('./routes/staticHostRoutes');
 const leaseRoutes = require('./routes/leaseRoutes');
-const configRoutes = require('./routes/configRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 
 const app = express();
@@ -20,11 +19,9 @@ app.use(express.json());
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/subnets', subnetRoutes);
-app.use('/api/scopes', subnetRoutes);
+app.use('/api/scopes', scopeRoutes);
 app.use('/api/static-hosts', staticHostRoutes);
 app.use('/api/leases', leaseRoutes);
-app.use('/api/config', configRoutes);
 app.use('/api/service', serviceRoutes);
 
 // Health check

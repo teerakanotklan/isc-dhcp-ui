@@ -108,7 +108,7 @@ export function Sidebar({ isOpen, onClose }) {
                 onClick={onClose}
                 className={`w-full h-11 px-3.5 flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                   active
-                    ? 'bg-indigo-600 text-white shadow-glow-indigo font-semibold'
+                    ? 'bg-indigo-600 text-white font-semibold'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
