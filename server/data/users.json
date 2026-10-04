@@ -1,0 +1,10 @@
+[
+  {
+    "id": "user_admin",
+    "username": "admin",
+    "name": "DHCP Administrator",
+    "passwordHash": "$2a$10$G8U6jLFFPAOuRdlM.mg.lOAqWlhu2kv0DbPhcLRMvQlNUCIVFpwH.",
+    "role": "admin",
+    "createdAt": "2026-10-04T08:10:00.049Z"
+  }
+]
