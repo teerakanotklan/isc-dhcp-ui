@@ -22,8 +22,9 @@ export function AppContent() {
   const [notification, setNotification] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Apply theme
+  // Apply theme instantly without transition lag/delay
   useEffect(() => {
+    document.documentElement.classList.add('disable-transitions');
     document.documentElement.setAttribute('data-theme', theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -31,6 +32,12 @@ export function AppContent() {
       document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('dhcp_theme', theme);
+
+    // Force reflow and remove transition suppression in next animation frame
+    window.getComputedStyle(document.documentElement).opacity;
+    requestAnimationFrame(() => {
+      document.documentElement.classList.remove('disable-transitions');
+    });
   }, [theme]);
 
   const toggleTheme = () => {
@@ -91,7 +98,7 @@ export function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#070a13] flex text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#070a13] flex text-slate-900 dark:text-slate-100">
       {/* Sidebar with responsive mobile drawer */}
       <Sidebar
         counts={counts}

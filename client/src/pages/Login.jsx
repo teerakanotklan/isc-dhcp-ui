@@ -23,7 +23,7 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-50 dark:bg-[#070a13] transition-colors">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-50 dark:bg-[#070a13]">
       {/* Background glowing orbs */}
       <div className="absolute w-[500px] h-[500px] rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 blur-[100px] -top-20 -left-20 pointer-events-none" />
       <div className="absolute w-[450px] h-[450px] rounded-full bg-cyan-500/10 dark:bg-cyan-500/20 blur-[100px] -bottom-20 -right-20 pointer-events-none" />
