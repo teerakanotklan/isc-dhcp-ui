@@ -11,7 +11,7 @@ import {
   X
 } from 'lucide-react';
 
-export function Sidebar({ counts, isOpen, onClose }) {
+export function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
 
   const navItems = [
@@ -23,28 +23,25 @@ export function Sidebar({ counts, isOpen, onClose }) {
     },
     {
       to: '/subnets',
-      label: 'Subnet Management',
+      label: 'Subnets',
       icon: Network,
-      badge: counts?.subnets,
       isActive: (pathname) => pathname.startsWith('/subnets')
     },
     {
       to: '/static-hosts',
-      label: 'Static IP (Hosts)',
+      label: 'Static IPs',
       icon: BookmarkCheck,
-      badge: counts?.staticHosts,
       isActive: (pathname) => pathname.startsWith('/static-hosts')
     },
     {
       to: '/leases',
-      label: 'Lease IP',
+      label: 'Leases',
       icon: Wifi,
-      badge: counts?.activeLeases,
       isActive: (pathname) => pathname.startsWith('/leases')
     },
     {
       to: '/config',
-      label: 'DHCP Config',
+      label: 'Config',
       icon: FileCode,
       isActive: (pathname) => pathname.startsWith('/config')
     },
@@ -100,7 +97,7 @@ export function Sidebar({ counts, isOpen, onClose }) {
         </div>
 
         {/* Navigation Links */}
-        <nav className="p-3 flex-1 flex flex-col gap-1.5 overflow-y-auto">
+        <nav className="p-3 flex-1 flex flex-col gap-2 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = item.isActive(location.pathname);
@@ -109,38 +106,18 @@ export function Sidebar({ counts, isOpen, onClose }) {
                 key={item.to}
                 to={item.to}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                className={`w-full h-11 px-3.5 flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                   active
                     ? 'bg-indigo-600 text-white shadow-glow-indigo font-semibold'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <Icon size={18} className={active ? 'text-white' : 'text-slate-400 dark:text-slate-500'} />
+                <Icon size={19} className={active ? 'text-white' : 'text-slate-400 dark:text-slate-500'} />
                 <span>{item.label}</span>
-                {item.badge !== undefined && item.badge !== null && (
-                  <span
-                    className={`ml-auto text-xs px-2 py-0.5 rounded-full font-semibold ${
-                      active
-                        ? 'bg-white/20 text-white'
-                        : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
               </NavLink>
             );
           })}
         </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <div>
-            <div className="font-medium text-slate-700 dark:text-slate-300">ISC DHCP Manager</div>
-            <div className="text-[11px]">Tailwind & Responsive</div>
-          </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        </div>
       </aside>
     </>
   );

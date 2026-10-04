@@ -101,15 +101,12 @@ export function AppContent() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#070a13] flex text-slate-900 dark:text-slate-100">
       {/* Sidebar with responsive mobile drawer */}
       <Sidebar
-        counts={counts}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-clip">
         <Navbar
-          serviceStatus={serviceStatus}
-          onRefreshService={fetchServiceAndCounts}
           theme={theme}
           toggleTheme={toggleTheme}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
